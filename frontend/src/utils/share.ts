@@ -7,8 +7,9 @@ function scoreToEmoji(score: number): string {
 }
 
 export function buildShareText(results: RoundResult[], streak: number): string {
+  const totalScore = results.reduce((sum, r) => sum + r.score, 0);
   const emojiRow = results.map((r) => scoreToEmoji(r.score)).join(' ');
-  return `MSRP - Daily Run\nStreak: ${streak}\n${emojiRow}`;
+  return `MSRP\nStreak: ${streak}\nScore: ${totalScore}/500\n${emojiRow}`;
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

@@ -124,9 +124,9 @@ class EbayService(
             if (item != null) {
                 item.gameDate = tomorrow
                 curatedItems.add(item)
-                Logger.info("Selected item: {} at ${}", item.title, item.soldPrice)
+                Logger.info("Selected item: {} at {}", item.title, item.soldPrice)
             } else {
-                Logger.warn("No suitable item found for bracket ${}-${}", bracket.first, bracket.second)
+                Logger.warn("No suitable item found for bracket {}-{}", bracket.first, bracket.second)
             }
         }
 

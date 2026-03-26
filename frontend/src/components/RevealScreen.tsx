@@ -41,14 +41,14 @@ export default function RevealScreen({ result, currentRound, totalRounds, onNext
         </div>
 
         <div className="p-4">
-          <h2 className="text-white font-semibold text-base leading-tight mb-4 line-clamp-2">
+          <h2 className="text-msrp-text font-semibold text-base leading-tight mb-4 line-clamp-2">
             {result.item.title}
           </h2>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-msrp-bg rounded-lg p-3 border border-msrp-border">
               <div className="text-msrp-muted text-xs mb-1">Your Guess</div>
-              <div className="text-white font-bold text-lg">{formatPrice(result.guess)}</div>
+              <div className="text-msrp-text font-bold text-lg">{formatPrice(result.guess)}</div>
             </div>
             <div className="bg-msrp-bg rounded-lg p-3 border border-msrp-border">
               <div className="text-msrp-muted text-xs mb-1">Sold Price</div>

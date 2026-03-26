@@ -3,6 +3,7 @@ import { DailyItem, RoundResult, GameState, GameProgress } from '../types';
 import { fetchTodayItems, verifyGuess } from '../services/api';
 
 const PROGRESS_KEY = 'msrp-progress';
+const LAST_RESULTS_KEY = 'msrp-last-results';
 const TOTAL_ROUNDS = 5;
 
 function getToday(): string {
@@ -26,6 +27,20 @@ function loadProgress(): GameProgress | null {
 
 function saveProgress(progress: GameProgress): void {
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+}
+
+export function loadLastResults(): RoundResult[] | null {
+  try {
+    const raw = localStorage.getItem(LAST_RESULTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // corrupted
+  }
+  return null;
+}
+
+function saveLastResults(results: RoundResult[]): void {
+  localStorage.setItem(LAST_RESULTS_KEY, JSON.stringify(results));
 }
 
 export function useGameState() {
@@ -56,7 +71,7 @@ export function useGameState() {
             setGameState('playing');
           }
         } else {
-          setGameState('playing');
+          setGameState('landing');
         }
       } catch (e) {
         if (cancelled) return;
@@ -67,6 +82,10 @@ export function useGameState() {
 
     init();
     return () => { cancelled = true; };
+  }, []);
+
+  const startGame = useCallback(() => {
+    setGameState('playing');
   }, []);
 
   const submitGuess = useCallback(async (guess: number) => {
@@ -96,6 +115,10 @@ export function useGameState() {
         currentRound: nextRound,
         results: newResults,
       });
+
+      if (nextRound >= TOTAL_ROUNDS) {
+        saveLastResults(newResults);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to verify guess');
     }
@@ -118,6 +141,7 @@ export function useGameState() {
     results,
     gameState,
     error,
+    startGame,
     submitGuess,
     nextRound,
     totalRounds: TOTAL_ROUNDS,

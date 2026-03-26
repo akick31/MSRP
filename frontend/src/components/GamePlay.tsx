@@ -55,7 +55,7 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
         </div>
 
         <div className="p-4">
-          <h2 className="text-white font-semibold text-base leading-tight mb-3 line-clamp-2">
+          <h2 className="text-msrp-text font-semibold text-base leading-tight mb-3 line-clamp-2">
             {item.title}
           </h2>
 
@@ -74,7 +74,7 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
                 onKeyDown={handleKeyDown}
                 placeholder="0.00"
                 disabled={submitting}
-                className="w-full bg-msrp-bg border border-msrp-border rounded-lg pl-8 pr-3 py-3 text-white text-lg font-medium placeholder-msrp-border focus:outline-none focus:border-msrp-accent transition-colors"
+                className="w-full bg-msrp-bg border border-msrp-border rounded-lg pl-8 pr-3 py-3 text-msrp-text text-lg font-medium placeholder-msrp-border focus:outline-none focus:border-msrp-accent transition-colors"
               />
             </div>
 
@@ -83,7 +83,7 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
               disabled={!isValid || submitting}
               className="px-5 py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:brightness-90 transition-all whitespace-nowrap"
             >
-              {submitting ? '...' : 'Lock Guess'}
+              {submitting ? '...' : 'Guess'}
             </button>
           </div>
         </div>

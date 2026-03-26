@@ -40,4 +40,4 @@ export interface GameProgress {
   results: RoundResult[];
 }
 
-export type GameState = 'loading' | 'playing' | 'revealing' | 'finished';
+export type GameState = 'loading' | 'landing' | 'playing' | 'revealing' | 'finished';
