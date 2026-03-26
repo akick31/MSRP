@@ -1,0 +1,134 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'msrp-backend-dev'
+        CONTAINER_NAME = 'MSRP-Backend-DEV'
+        DOCKERFILE = 'Dockerfile_DEV'
+        APP_PROPERTIES = './src/main/resources/application.properties'
+        DB_USERNAME = credentials('DB_USERNAME')
+        DB_PASSWORD = credentials('DB_PASSWORD')
+        EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
+        EBAY_CLIENT_SECRET = credentials('MSRP_EBAY_CLIENT_SECRET')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out the MSRP Backend project...'
+                checkout scm
+            }
+        }
+
+        stage('Get Version') {
+            steps {
+                script {
+                    def latestTag = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
+
+                    if (!latestTag) {
+                        latestTag = '1.0.0'
+                    }
+
+                    echo "Current Version: ${latestTag}"
+
+                    env.VERSION = latestTag
+
+                    currentBuild.description = "Version: ${env.VERSION}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - Version: ${env.VERSION}"
+                }
+            }
+        }
+
+        stage('Stop and Remove Existing Container') {
+            steps {
+                script {
+                    echo 'Stopping and removing the existing MSRP Backend instance...'
+                    sh """
+                        docker stop ${CONTAINER_NAME} || echo "MSRP Backend is not running."
+                        docker rm ${CONTAINER_NAME} || echo "No old MSRP Backend instance to remove."
+                    """
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Creating the dev properties file...'
+                dir('backend') {
+                    script {
+                        def propertiesContent = """
+                            server.port=1313
+                            spring.datasource.url=jdbc:mariadb://51.81.32.234:3306/msrp_dev
+                            spring.datasource.username=${env.DB_USERNAME}
+                            spring.datasource.password=${env.DB_PASSWORD}
+                            spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+                            spring.jpa.hibernate.ddl-auto=update
+                            spring.jpa.show-sql=false
+                            spring.jackson.property-naming-strategy=SNAKE_CASE
+                            ebay.client-id=${env.EBAY_CLIENT_ID}
+                            ebay.client-secret=${env.EBAY_CLIENT_SECRET}
+                            ebay.api-base-url=https://api.sandbox.ebay.com
+                            ebay.auth-url=https://api.sandbox.ebay.com/identity/v1/oauth2/token
+                            management.endpoints.web.exposure.include=*
+                            management.endpoint.health.show-details=always
+                            management.health.defaults.enabled=true
+                            management.health.db.enabled=true
+                            logging.level.org.hibernate=warn
+                            logging.level.org.hibernate.SQL=warn
+                            logging.level.org.hibernate.type.descriptor.sql=warn
+                        """.stripIndent()
+
+                        writeFile file: "${env.APP_PROPERTIES}", text: propertiesContent
+                    }
+
+                    echo 'Building the MSRP Backend project...'
+                    sh 'chmod +x gradlew || true'
+                    sh './gradlew clean build -x test'
+                }
+            }
+        }
+
+        stage('Build New Docker Image') {
+            steps {
+                script {
+                    echo 'Building the new MSRP Backend Docker image...'
+                    dir('backend') {
+                        sh """
+                            docker build -f ${DOCKERFILE} -t ${IMAGE_NAME}:${DOCKERFILE} .
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Run New MSRP Backend Container') {
+            steps {
+                script {
+                    echo 'Starting the new MSRP Backend container...'
+                    sh """
+                        docker run --network="host" -d --restart=always --name ${CONTAINER_NAME} \
+                            ${IMAGE_NAME}:${DOCKERFILE}
+                    """
+                }
+            }
+        }
+
+        stage('Cleanup Docker System') {
+            steps {
+                script {
+                    echo 'Pruning unused Docker resources...'
+                    sh 'docker system prune -a --force'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'MSRP Backend DEV has been successfully deployed!'
+        }
+        failure {
+            echo 'An error occurred during the MSRP Backend DEV deployment.'
+        }
+    }
+}
