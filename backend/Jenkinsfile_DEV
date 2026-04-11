@@ -55,7 +55,7 @@ pipeline {
                 dir('backend') {
                     script {
                         def propertiesContent = """
-                            server.port=1313
+                            server.port=919
                             spring.datasource.url=jdbc:mariadb://51.81.32.234:3306/msrp_dev
                             spring.datasource.username=${env.DB_USERNAME}
                             spring.datasource.password=${env.DB_PASSWORD}
