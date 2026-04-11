@@ -1,0 +1,119 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'msrp-frontend-dev'
+        CONTAINER_NAME = 'MSRP-Frontend-DEV'
+        DOCKERFILE = 'Dockerfile_DEV'
+        EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out the MSRP Frontend project...'
+                checkout scm
+            }
+        }
+
+        stage('Get Version') {
+            steps {
+                script {
+                    def latestTag = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
+
+                    if (!latestTag) {
+                        latestTag = '1.0.0'
+                    }
+
+                    echo "Current Version: ${latestTag}"
+
+                    env.VERSION = latestTag
+
+                    currentBuild.description = "Version: ${env.VERSION}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - Version: ${env.VERSION}"
+                }
+            }
+        }
+
+        stage('Generate .env File') {
+            steps {
+                script {
+                    echo 'Generating .env file...'
+                    dir('frontend') {
+                        sh """
+                            cat <<EOF > .env
+                            VITE_API_BASE_URL=http://51.81.32.234:1313/api/v1/msrp
+                            EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Stop and Remove Existing Container') {
+            steps {
+                script {
+                    echo 'Stopping and removing the existing MSRP Frontend instance...'
+                    sh """
+                        docker stop ${CONTAINER_NAME} || echo "MSRP Frontend is not running."
+                        docker rm ${CONTAINER_NAME} || echo "No old MSRP Frontend instance to remove."
+                    """
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image for MSRP Frontend...'
+                dir('frontend') {
+                    sh """
+                        docker build -f ${DOCKERFILE} -t ${IMAGE_NAME}:latest .
+                    """
+                }
+            }
+        }
+
+        stage('Run New Container') {
+            steps {
+                script {
+                    echo 'Running the new container...'
+                    dir('frontend') {
+                        sh """
+                            docker run -d --name ${CONTAINER_NAME} \
+                                -p 920:920 \
+                                --env-file .env \
+                                ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    echo 'Cleaning up sensitive files...'
+                    sh 'rm -f frontend/.env'
+                }
+            }
+        }
+
+        stage('Cleanup Docker System') {
+            steps {
+                script {
+                    echo 'Pruning unused Docker resources...'
+                    sh 'docker system prune -f'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'MSRP Frontend DEV deployed successfully!'
+        }
+        failure {
+            echo 'MSRP Frontend DEV deployment failed.'
+        }
+    }
+}
