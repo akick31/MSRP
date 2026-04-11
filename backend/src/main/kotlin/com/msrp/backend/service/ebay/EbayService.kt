@@ -103,8 +103,8 @@ class EbayService(
         )
     }
 
-    fun curateDailyItems() {
-        val tomorrow = LocalDate.now().plusDays(1)
+    fun curateDailyItems(forToday: Boolean = false) {
+        val tomorrow = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
 
         val existing = dailyItemRepository.findByGameDate(tomorrow)
         if (existing.size >= ITEMS_PER_DAY) {

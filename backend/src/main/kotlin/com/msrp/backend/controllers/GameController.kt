@@ -10,8 +10,11 @@ import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 
 @CrossOrigin(origins = ["*"])
 @RestController
@@ -34,5 +37,14 @@ class GameController(
     ): ResponseEntity<VerifyResponse> {
         val response = ebayService.verifyGuess(request.itemId, request.guess)
         return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/admin/curate")
+    fun triggerCuration(
+        @RequestParam(defaultValue = "false") forToday: Boolean,
+    ): ResponseEntity<Map<String, String>> {
+        ebayService.curateDailyItems(forToday)
+        val target = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
+        return ResponseEntity.ok(mapOf("message" to "Curation triggered for $target"))
     }
 }
