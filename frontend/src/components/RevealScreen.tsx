@@ -73,12 +73,24 @@ export default function RevealScreen({ result, currentRound, totalRounds, onNext
             </div>
           </div>
 
-          <button
-            onClick={onNext}
-            className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all"
-          >
-            {isLastRound ? 'See Results' : 'Next Item'}
-          </button>
+          <div className="flex flex-col gap-2">
+            {result.item.item_url && (
+              <a
+                href={result.item.item_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-2.5 text-center text-msrp-muted text-sm font-medium border border-msrp-border rounded-lg hover:text-msrp-text hover:border-msrp-accent transition-colors"
+              >
+                View on eBay
+              </a>
+            )}
+            <button
+              onClick={onNext}
+              className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all"
+            >
+              {isLastRound ? 'See Results' : 'Next Item'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

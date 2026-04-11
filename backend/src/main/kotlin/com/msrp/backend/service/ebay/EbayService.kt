@@ -13,6 +13,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import java.net.URI
 import java.time.LocalDate
 import java.util.Base64
 import kotlin.math.abs
@@ -31,26 +32,32 @@ class EbayService(
 
     companion object {
         private const val ITEMS_PER_DAY = 5
+        private const val MIN_BID_COUNT = 5
 
         private val PRICE_BRACKETS = listOf(
-            10.0 to 50.0,
-            50.0 to 150.0,
-            150.0 to 500.0,
-            500.0 to 2000.0,
+            10.0 to 75.0,
+            75.0 to 200.0,
+            200.0 to 600.0,
+            600.0 to 2000.0,
             2000.0 to 10000.0,
         )
 
         private val SEARCH_KEYWORDS = listOf(
-            "vintage",
-            "collectible",
-            "rare",
-            "antique",
-            "limited edition",
-            "signed",
-            "sealed",
-            "electronics",
-            "sneakers",
+            "vintage electronics",
+            "collectible sports card",
+            "rare sneakers",
+            "antique watch",
+            "limited edition toy",
+            "signed memorabilia",
+            "sealed video game",
+            "vintage jewelry",
+            "retro gaming",
             "trading cards",
+            "vintage camera",
+            "comic book",
+            "vinyl record",
+            "luxury handbag",
+            "vintage guitar",
         )
     }
 
@@ -115,18 +122,31 @@ class EbayService(
         val token = authenticate()
         val curatedItems = mutableListOf<DailyItem>()
 
-        for ((index, bracket) in PRICE_BRACKETS.withIndex()) {
+        val shuffledKeywords = SEARCH_KEYWORDS.shuffled()
+        var keywordIndex = 0
+
+        for (bracket in PRICE_BRACKETS) {
             if (curatedItems.size >= ITEMS_PER_DAY) break
 
-            val keyword = SEARCH_KEYWORDS[index % SEARCH_KEYWORDS.size]
-            val item = searchAndSelectItem(token, keyword, bracket.first, bracket.second)
+            var item: DailyItem? = null
+            var attempts = 0
+
+            while (item == null && attempts < 5) {
+                val keyword = shuffledKeywords[keywordIndex % shuffledKeywords.size]
+                keywordIndex++
+                attempts++
+                item = searchAndSelectItem(token, keyword, bracket.first, bracket.second)
+                if (item == null) {
+                    Logger.warn("No results for keyword '{}' in bracket {}-{}, trying next keyword", keyword, bracket.first, bracket.second)
+                }
+            }
 
             if (item != null) {
                 item.gameDate = tomorrow
                 curatedItems.add(item)
                 Logger.info("Selected item: {} at {}", item.title, item.soldPrice)
             } else {
-                Logger.warn("No suitable item found for bracket {}-{}", bracket.first, bracket.second)
+                Logger.warn("Exhausted keywords for bracket {}-{}, skipping", bracket.first, bracket.second)
             }
         }
 
@@ -146,17 +166,15 @@ class EbayService(
     ): DailyItem? {
         val filterString = buildFilterString(minPrice, maxPrice)
 
+        val encodedFilter = filterString
+            .replace("{", "%7B")
+            .replace("}", "%7D")
+            .replace("|", "%7C")
+        val encodedKeyword = keyword.replace(" ", "%20")
+        val rawUri = "$apiBaseUrl/buy/browse/v1/item_summary/search?q=$encodedKeyword&filter=$encodedFilter&sort=-price&limit=50"
+
         val response = webClient.get()
-            .uri { builder ->
-                builder.scheme("https")
-                    .host(apiBaseUrl.removePrefix("https://").removePrefix("http://"))
-                    .path("/buy/browse/v1/item_summary/search")
-                    .queryParam("q", keyword)
-                    .queryParam("filter", filterString)
-                    .queryParam("sort", "-price")
-                    .queryParam("limit", "50")
-                    .build()
-            }
+            .uri(URI.create(rawUri))
             .header("Authorization", "Bearer $token")
             .header("X-EBAY-C-MARKETPLACE-ID", "EBAY_US")
             .retrieve()
@@ -168,7 +186,7 @@ class EbayService(
         val eligibleItems = itemSummaries
             .filter { node ->
                 val bidCount = node.get("bidCount")?.asInt() ?: 0
-                bidCount > 15
+                bidCount >= MIN_BID_COUNT
             }
             .toList()
 
@@ -181,7 +199,6 @@ class EbayService(
     private fun buildFilterString(minPrice: Double, maxPrice: Double): String {
         return listOf(
             "buyingOptions:{AUCTION}",
-            "conditions:{NEW|USED}",
             "price:[${minPrice}..${maxPrice}]",
             "priceCurrency:USD",
             "soldItemsOnly:true",
@@ -195,8 +212,11 @@ class EbayService(
         entity.imageUrl = item.get("image")?.get("imageUrl")?.asText()
             ?: item.get("thumbnailImages")?.firstOrNull()?.get("imageUrl")?.asText()
             ?: ""
-        entity.soldPrice = item.get("price")?.get("value")?.asDouble() ?: 0.0
+        entity.soldPrice = item.get("currentBidPrice")?.get("value")?.asDouble()
+            ?: item.get("price")?.get("value")?.asDouble()
+            ?: 0.0
         entity.bidCount = item.get("bidCount")?.asInt() ?: 0
+        entity.itemUrl = item.get("itemWebUrl")?.asText() ?: ""
         return entity
     }
 }

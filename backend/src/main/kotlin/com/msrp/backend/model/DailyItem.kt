@@ -40,4 +40,8 @@ class DailyItem {
     @Column(nullable = false)
     @JsonProperty("sold_price")
     var soldPrice: Double = 0.0
+
+    @Column(nullable = false, length = 1024)
+    @JsonProperty("item_url")
+    var itemUrl: String = ""
 }

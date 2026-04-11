@@ -6,4 +6,5 @@ data class DailyItemResponse(
     val title: String,
     val imageUrl: String,
     val bidCount: Int,
+    val itemUrl: String,
 )

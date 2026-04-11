@@ -4,6 +4,7 @@ export interface DailyItem {
   title: string;
   image_url: string;
   bid_count: number;
+  item_url: string;
 }
 
 export interface VerifyRequest {

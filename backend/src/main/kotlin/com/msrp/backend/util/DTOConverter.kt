@@ -14,6 +14,7 @@ class DTOConverter {
             title = item.title,
             imageUrl = item.imageUrl,
             bidCount = item.bidCount,
+            itemUrl = item.itemUrl,
         )
     }
 }
