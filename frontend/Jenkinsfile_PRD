@@ -18,11 +18,7 @@ pipeline {
         stage('Get Version') {
             steps {
                 script {
-                    def latestTag = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
-
-                    if (!latestTag) {
-                        latestTag = '1.0.0'
-                    }
+                    def latestTag = sh(script: "git describe --tags --abbrev=0 2>/dev/null || echo '1.0.0'", returnStdout: true).trim()
 
                     echo "Current Version: ${latestTag}"
 

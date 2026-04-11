@@ -10,6 +10,8 @@ pipeline {
         DB_PASSWORD = credentials('DB_PASSWORD')
         EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
         EBAY_CLIENT_SECRET = credentials('MSRP_EBAY_CLIENT_SECRET')
+        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
+        PATH = "/usr/lib/jvm/java-17-openjdk-amd64/bin:${env.PATH}"
     }
 
     stages {
@@ -23,11 +25,7 @@ pipeline {
         stage('Get Version') {
             steps {
                 script {
-                    def latestTag = sh(script: "git describe --tags --abbrev=0", returnStdout: true).trim()
-
-                    if (!latestTag) {
-                        latestTag = '1.0.0'
-                    }
+                    def latestTag = sh(script: "git describe --tags --abbrev=0 2>/dev/null || echo '1.0.0'", returnStdout: true).trim()
 
                     echo "Current Version: ${latestTag}"
 
