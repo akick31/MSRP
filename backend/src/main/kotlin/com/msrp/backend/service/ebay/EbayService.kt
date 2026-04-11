@@ -32,15 +32,7 @@ class EbayService(
     companion object {
         private const val ITEMS_PER_DAY = 5
         private const val MIN_BID_COUNT = 5
-        private const val REQUEST_DELAY_MS = 3000L
-
-        private val PRICE_BRACKETS = listOf(
-            10.0 to 75.0,
-            75.0 to 200.0,
-            200.0 to 600.0,
-            600.0 to 2000.0,
-            2000.0 to 10000.0,
-        )
+        private const val MAX_ATTEMPTS = 3
 
         private val SEARCH_TERMS = listOf(
             // Sports
@@ -136,35 +128,44 @@ class EbayService(
             return
         }
 
-        val curatedItems = mutableListOf<DailyItem>()
+        val usedIds = existing.map { it.ebayItemId }.toMutableSet()
+        val curatedItems = existing.toMutableList()
 
-        for (bracket in PRICE_BRACKETS) {
-            if (curatedItems.size >= ITEMS_PER_DAY) break
-
-            Thread.sleep(REQUEST_DELAY_MS)
+        repeat(MAX_ATTEMPTS) { attempt ->
+            if (curatedItems.size >= ITEMS_PER_DAY) return@repeat
 
             val keyword = SEARCH_TERMS.random()
             val pageNumber = (1..10).random()
-            val item = searchCompletedAuction(keyword, pageNumber, bracket.first, bracket.second)
+            Logger.info("Attempt {}: searching '{}' page {}", attempt + 1, keyword, pageNumber)
 
-            if (item != null) {
+            val candidates = searchCompletedAuctions(keyword, pageNumber)
+            if (candidates.isEmpty()) {
+                Logger.warn("No eligible items found for keyword '{}' page {}", keyword, pageNumber)
+                return@repeat
+            }
+
+            val shuffled = candidates.shuffled()
+            for (item in shuffled) {
+                if (curatedItems.size >= ITEMS_PER_DAY) break
+                if (item.ebayItemId in usedIds) continue
                 item.gameDate = targetDate
                 curatedItems.add(item)
+                usedIds.add(item.ebayItemId)
                 Logger.info("Selected item: {} at {}", item.title, item.soldPrice)
-            } else {
-                Logger.warn("No eligible item found for keyword '{}' page {} in bracket {}-{}", keyword, pageNumber, bracket.first, bracket.second)
             }
         }
 
-        if (curatedItems.isNotEmpty()) {
-            dailyItemRepository.saveAll(curatedItems)
-            Logger.info("Saved {} items for {}", curatedItems.size, targetDate)
-        } else {
-            Logger.error("Failed to curate any items for {}", targetDate)
+        val newItems = curatedItems.filter { it.id == 0L }
+        if (newItems.isNotEmpty()) {
+            dailyItemRepository.saveAll(newItems)
+            Logger.info("Saved {} items for {}", newItems.size, targetDate)
+        }
+        if (curatedItems.size < ITEMS_PER_DAY) {
+            Logger.warn("Only curated {}/{} items for {}", curatedItems.size, ITEMS_PER_DAY, targetDate)
         }
     }
 
-    private fun searchCompletedAuction(keyword: String, pageNumber: Int, minPrice: Double, maxPrice: Double): DailyItem? {
+    private fun searchCompletedAuctions(keyword: String, pageNumber: Int): List<DailyItem> {
         val endedFrom = ZonedDateTime.now(ZoneOffset.UTC).minusDays(30)
             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
 
@@ -178,10 +179,8 @@ class EbayService(
                 "&keywords=${keyword.replace(" ", "%20")}" +
                 "&itemFilter(0).name=SoldItemsOnly&itemFilter(0).value=true" +
                 "&itemFilter(1).name=ListingType&itemFilter(1).value=Auction" +
-                "&itemFilter(2).name=MinPrice&itemFilter(2).value=$minPrice&itemFilter(2).paramName=Currency&itemFilter(2).paramValue=USD" +
-                "&itemFilter(3).name=MaxPrice&itemFilter(3).value=$maxPrice&itemFilter(3).paramName=Currency&itemFilter(3).paramValue=USD" +
-                "&itemFilter(4).name=MinBidCount&itemFilter(4).value=$MIN_BID_COUNT" +
-                "&itemFilter(5).name=EndTimeFrom&itemFilter(5).value=$endedFrom" +
+                "&itemFilter(2).name=MinBidCount&itemFilter(2).value=$MIN_BID_COUNT" +
+                "&itemFilter(3).name=EndTimeFrom&itemFilter(3).value=$endedFrom" +
                 "&sortOrder=EndTimeSoonest" +
                 "&paginationInput.entriesPerPage=100" +
                 "&paginationInput.pageNumber=$pageNumber",
@@ -196,15 +195,15 @@ class EbayService(
         } catch (e: WebClientResponseException) {
             val body = e.responseBodyAsString
             if (body.contains("10001")) {
-                Logger.warn("Rate limited by eBay for keyword '{}', backing off 10s", keyword)
-                Thread.sleep(10000L)
+                Logger.warn("Rate limited by eBay for keyword '{}', backing off 30s", keyword)
+                Thread.sleep(30000L)
             } else {
                 Logger.error("eBay Finding API error {} for keyword '{}': {}", e.statusCode, keyword, body)
             }
-            return null
+            return emptyList()
         } catch (e: Exception) {
             Logger.error("eBay Finding API request failed for keyword '{}': {}", keyword, e.message)
-            return null
+            return emptyList()
         }
 
         val items = response
@@ -213,18 +212,14 @@ class EbayService(
             ?.get("searchResult")
             ?.get(0)
             ?.get("item")
-            ?: return null
+            ?: return emptyList()
 
-        val eligible = items.filter { node ->
+        return items.filter { node ->
             val sellingState = node.get("sellingStatus")?.get(0)?.get("sellingState")?.get(0)?.asText() ?: ""
             val soldPrice = node.get("sellingStatus")?.get(0)?.get("currentPrice")?.get(0)?.get("__value__")?.asDouble() ?: 0.0
             val hasImage = !node.get("galleryURL")?.get(0)?.asText().isNullOrBlank()
             sellingState == "EndedWithSales" && soldPrice > 0.0 && hasImage
-        }.toList()
-
-        if (eligible.isEmpty()) return null
-
-        return mapToEntity(eligible.random())
+        }.map { mapToEntity(it) }
     }
 
     private fun mapToEntity(item: JsonNode): DailyItem {
