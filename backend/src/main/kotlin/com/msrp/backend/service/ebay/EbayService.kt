@@ -147,7 +147,16 @@ class EbayService(
         val filterString = buildFilterString(minPrice, maxPrice)
 
         val response = webClient.get()
-            .uri("$apiBaseUrl/buy/browse/v1/item_summary/search?q=$keyword&filter=$filterString&sort=-price&limit=50")
+            .uri { builder ->
+                builder.scheme("https")
+                    .host(apiBaseUrl.removePrefix("https://").removePrefix("http://"))
+                    .path("/buy/browse/v1/item_summary/search")
+                    .queryParam("q", keyword)
+                    .queryParam("filter", filterString)
+                    .queryParam("sort", "-price")
+                    .queryParam("limit", "50")
+                    .build()
+            }
             .header("Authorization", "Bearer $token")
             .header("X-EBAY-C-MARKETPLACE-ID", "EBAY_US")
             .retrieve()
