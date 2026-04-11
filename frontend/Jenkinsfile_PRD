@@ -37,7 +37,7 @@ pipeline {
                     dir('frontend') {
                         sh """
                             cat <<EOF > .env
-                            VITE_API_BASE_URL=https://api.msrp.com/api/v1/msrp
+                            VITE_API_BASE_URL=https://api.msrpgame.com/api/v1/msrp
                             EOF
                         """
                     }
