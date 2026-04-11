@@ -6,11 +6,11 @@ import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.service.ebay.EbayService
 import com.msrp.backend.util.DTOConverter
 import org.springframework.http.ResponseEntity
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -43,8 +43,13 @@ class GameController(
     fun triggerCuration(
         @RequestParam(defaultValue = "false") forToday: Boolean,
     ): ResponseEntity<Map<String, String>> {
-        ebayService.curateDailyItems(forToday)
-        val target = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
-        return ResponseEntity.ok(mapOf("message" to "Curation triggered for $target"))
+        return try {
+            ebayService.curateDailyItems(forToday)
+            val target = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
+            ResponseEntity.ok(mapOf("message" to "Curation triggered for $target"))
+        } catch (e: Exception) {
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(mapOf("error" to (e.message ?: "Curation failed")))
+        }
     }
 }

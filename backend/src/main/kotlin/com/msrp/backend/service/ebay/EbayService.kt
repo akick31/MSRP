@@ -9,13 +9,14 @@ import com.msrp.backend.util.ItemNotFromTodayException
 import com.msrp.backend.util.Logger
 import com.msrp.backend.util.NoItemsAvailableException
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import java.net.URI
 import java.time.LocalDate
-import java.util.Base64
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -25,14 +26,13 @@ class EbayService(
     private val webClient: WebClient,
     private val dailyItemRepository: DailyItemRepository,
     @Value("\${ebay.client-id}") private val clientId: String,
-    @Value("\${ebay.client-secret}") private val clientSecret: String,
-    @Value("\${ebay.api-base-url}") private val apiBaseUrl: String,
-    @Value("\${ebay.auth-url}") private val authUrl: String,
+    @Value("\${ebay.finding-api-url}") private val findingApiUrl: String,
 ) {
 
     companion object {
         private const val ITEMS_PER_DAY = 5
         private const val MIN_BID_COUNT = 5
+        private const val REQUEST_DELAY_MS = 3000L
 
         private val PRICE_BRACKETS = listOf(
             10.0 to 75.0,
@@ -42,42 +42,59 @@ class EbayService(
             2000.0 to 10000.0,
         )
 
-        private val SEARCH_KEYWORDS = listOf(
-            "vintage electronics",
-            "collectible sports card",
-            "rare sneakers",
-            "antique watch",
-            "limited edition toy",
-            "signed memorabilia",
-            "sealed video game",
-            "vintage jewelry",
-            "retro gaming",
-            "trading cards",
-            "vintage camera",
-            "comic book",
-            "vinyl record",
-            "luxury handbag",
-            "vintage guitar",
+        private val SEARCH_TERMS = listOf(
+            // Sports
+            "baseball", "basketball", "football", "soccer", "hockey", "golf", "tennis",
+            "boxing", "wrestling", "cycling", "volleyball", "softball", "lacrosse",
+            "rugby", "cricket", "archery", "bowling", "fishing", "hunting", "skiing",
+            "snowboarding", "surfing", "skateboarding", "gymnastics", "weightlifting",
+            "martial arts", "badminton", "rowing", "kayaking", "climbing", "olympics",
+            // Outdoors & camping
+            "camping", "hiking", "fishing gear", "hunting gear", "archery gear",
+            "binoculars", "kayak", "canoe", "survival gear",
+            // Hobbies
+            "model train", "model airplane", "model ship", "remote control car",
+            "pinball machine", "arcade machine", "jukebox", "board game", "chess",
+            "telescope", "microscope", "stamps", "coins", "postcards",
+            "sewing machine", "pottery", "woodworking", "wine", "whiskey",
+            // Video games
+            "video game", "video game console", "retro game", "game cartridge",
+            "nintendo", "playstation", "xbox", "sega", "atari", "gameboy",
+            // Musical instruments
+            "guitar", "bass guitar", "electric guitar", "acoustic guitar",
+            "amplifier", "drum kit", "trumpet", "saxophone", "violin",
+            "synthesizer", "keyboard", "mandolin", "banjo", "ukulele",
+            "harmonica", "accordion", "cello", "flute", "clarinet",
+            // Trading cards & collectibles
+            "pokemon cards", "trading cards", "sports cards", "magic the gathering",
+            "yugioh cards", "comic book", "graded card",
+            // Electronics
+            "laptop", "camera", "lens", "turntable", "vintage stereo",
+            "headphones", "drone", "smartwatch", "vintage computer",
+            "vintage radio", "vintage television",
+            // Sneakers & clothing
+            "sneakers", "vintage clothing", "vintage jacket", "vintage jeans",
+            "vintage shoes", "vintage hat", "streetwear",
+            // Jewelry & watches
+            "watch", "gold ring", "silver jewelry", "diamond jewelry",
+            "vintage jewelry", "necklace", "bracelet", "vintage watch",
+            // Toys
+            "lego", "hot wheels", "action figure", "star wars toy",
+            "vintage toy", "diecast car", "antique doll", "toy train",
+            // Art & memorabilia
+            "signed memorabilia", "autograph", "movie poster", "concert poster",
+            "original painting", "sculpture", "vintage poster", "sports memorabilia",
+            // Coins & currency
+            "silver coin", "gold coin", "vintage coin", "commemorative coin",
+            "currency collection", "ancient coin",
+            // Antiques & collectibles
+            "antique furniture", "vintage pottery", "vintage glass", "vintage lamp",
+            "antique clock", "vintage toy", "vintage sign", "antique tool",
+            // Music & media
+            "vinyl record", "sealed record", "vintage album",
+            // Cameras
+            "film camera", "vintage camera", "camera lens", "darkroom equipment",
         )
-    }
-
-    private fun authenticate(): String {
-        val credentials = Base64.getEncoder()
-            .encodeToString("$clientId:$clientSecret".toByteArray())
-
-        val response = webClient.post()
-            .uri(authUrl)
-            .header("Authorization", "Basic $credentials")
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(
-                BodyInserters.fromFormData("grant_type", "client_credentials")
-                    .with("scope", "https://api.ebay.com/oauth/api_scope"),
-            )
-            .retrieve()
-            .bodyToMono(JsonNode::class.java)
-            .block() ?: throw RuntimeException("Failed to authenticate with eBay API")
-
-        return response.get("access_token").asText()
     }
 
     fun getTodayItems(): List<DailyItem> {
@@ -111,112 +128,116 @@ class EbayService(
     }
 
     fun curateDailyItems(forToday: Boolean = false) {
-        val tomorrow = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
+        val targetDate = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
 
-        val existing = dailyItemRepository.findByGameDate(tomorrow)
+        val existing = dailyItemRepository.findByGameDate(targetDate)
         if (existing.size >= ITEMS_PER_DAY) {
-            Logger.info("Items for {} already curated, skipping", tomorrow)
+            Logger.info("Items for {} already curated, skipping", targetDate)
             return
         }
 
-        val token = authenticate()
         val curatedItems = mutableListOf<DailyItem>()
-
-        val shuffledKeywords = SEARCH_KEYWORDS.shuffled()
-        var keywordIndex = 0
 
         for (bracket in PRICE_BRACKETS) {
             if (curatedItems.size >= ITEMS_PER_DAY) break
 
-            var item: DailyItem? = null
-            var attempts = 0
+            Thread.sleep(REQUEST_DELAY_MS)
 
-            while (item == null && attempts < 5) {
-                val keyword = shuffledKeywords[keywordIndex % shuffledKeywords.size]
-                keywordIndex++
-                attempts++
-                item = searchAndSelectItem(token, keyword, bracket.first, bracket.second)
-                if (item == null) {
-                    Logger.warn("No results for keyword '{}' in bracket {}-{}, trying next keyword", keyword, bracket.first, bracket.second)
-                }
-            }
+            val keyword = SEARCH_TERMS.random()
+            val pageNumber = (1..10).random()
+            val item = searchCompletedAuction(keyword, pageNumber, bracket.first, bracket.second)
 
             if (item != null) {
-                item.gameDate = tomorrow
+                item.gameDate = targetDate
                 curatedItems.add(item)
                 Logger.info("Selected item: {} at {}", item.title, item.soldPrice)
             } else {
-                Logger.warn("Exhausted keywords for bracket {}-{}, skipping", bracket.first, bracket.second)
+                Logger.warn("No eligible item found for keyword '{}' page {} in bracket {}-{}", keyword, pageNumber, bracket.first, bracket.second)
             }
         }
 
         if (curatedItems.isNotEmpty()) {
             dailyItemRepository.saveAll(curatedItems)
-            Logger.info("Saved {} items for {}", curatedItems.size, tomorrow)
+            Logger.info("Saved {} items for {}", curatedItems.size, targetDate)
         } else {
-            Logger.error("Failed to curate any items for {}", tomorrow)
+            Logger.error("Failed to curate any items for {}", targetDate)
         }
     }
 
-    private fun searchAndSelectItem(
-        token: String,
-        keyword: String,
-        minPrice: Double,
-        maxPrice: Double,
-    ): DailyItem? {
-        val filterString = buildFilterString(minPrice, maxPrice)
+    private fun searchCompletedAuction(keyword: String, pageNumber: Int, minPrice: Double, maxPrice: Double): DailyItem? {
+        val endedFrom = ZonedDateTime.now(ZoneOffset.UTC).minusDays(30)
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
 
-        val encodedFilter = filterString
-            .replace("{", "%7B")
-            .replace("}", "%7D")
-            .replace("|", "%7C")
-        val encodedKeyword = keyword.replace(" ", "%20")
-        val rawUri = "$apiBaseUrl/buy/browse/v1/item_summary/search?q=$encodedKeyword&filter=$encodedFilter&sort=-price&limit=50"
+        val uri = URI.create(
+            "$findingApiUrl" +
+                "?OPERATION-NAME=findCompletedItems" +
+                "&SERVICE-VERSION=1.0.0" +
+                "&SECURITY-APPNAME=$clientId" +
+                "&RESPONSE-DATA-FORMAT=JSON" +
+                "&REST-PAYLOAD" +
+                "&keywords=${keyword.replace(" ", "%20")}" +
+                "&itemFilter(0).name=SoldItemsOnly&itemFilter(0).value=true" +
+                "&itemFilter(1).name=ListingType&itemFilter(1).value=Auction" +
+                "&itemFilter(2).name=MinPrice&itemFilter(2).value=$minPrice&itemFilter(2).paramName=Currency&itemFilter(2).paramValue=USD" +
+                "&itemFilter(3).name=MaxPrice&itemFilter(3).value=$maxPrice&itemFilter(3).paramName=Currency&itemFilter(3).paramValue=USD" +
+                "&itemFilter(4).name=MinBidCount&itemFilter(4).value=$MIN_BID_COUNT" +
+                "&itemFilter(5).name=EndTimeFrom&itemFilter(5).value=$endedFrom" +
+                "&sortOrder=EndTimeSoonest" +
+                "&paginationInput.entriesPerPage=100" +
+                "&paginationInput.pageNumber=$pageNumber",
+        )
 
-        val response = webClient.get()
-            .uri(URI.create(rawUri))
-            .header("Authorization", "Bearer $token")
-            .header("X-EBAY-C-MARKETPLACE-ID", "EBAY_US")
-            .retrieve()
-            .bodyToMono(JsonNode::class.java)
-            .block()
-
-        val itemSummaries = response?.get("itemSummaries") ?: return null
-
-        val eligibleItems = itemSummaries
-            .filter { node ->
-                val bidCount = node.get("bidCount")?.asInt() ?: 0
-                bidCount >= MIN_BID_COUNT
+        val response = try {
+            webClient.get()
+                .uri(uri)
+                .retrieve()
+                .bodyToMono(JsonNode::class.java)
+                .block()
+        } catch (e: WebClientResponseException) {
+            val body = e.responseBodyAsString
+            if (body.contains("10001")) {
+                Logger.warn("Rate limited by eBay for keyword '{}', backing off 10s", keyword)
+                Thread.sleep(10000L)
+            } else {
+                Logger.error("eBay Finding API error {} for keyword '{}': {}", e.statusCode, keyword, body)
             }
-            .toList()
+            return null
+        } catch (e: Exception) {
+            Logger.error("eBay Finding API request failed for keyword '{}': {}", keyword, e.message)
+            return null
+        }
 
-        if (eligibleItems.isEmpty()) return null
+        val items = response
+            ?.get("findCompletedItemsResponse")
+            ?.get(0)
+            ?.get("searchResult")
+            ?.get(0)
+            ?.get("item")
+            ?: return null
 
-        val selected = eligibleItems.random()
-        return mapToEntity(selected)
-    }
+        val eligible = items.filter { node ->
+            val sellingState = node.get("sellingStatus")?.get(0)?.get("sellingState")?.get(0)?.asText() ?: ""
+            val soldPrice = node.get("sellingStatus")?.get(0)?.get("currentPrice")?.get(0)?.get("__value__")?.asDouble() ?: 0.0
+            val hasImage = !node.get("galleryURL")?.get(0)?.asText().isNullOrBlank()
+            sellingState == "EndedWithSales" && soldPrice > 0.0 && hasImage
+        }.toList()
 
-    private fun buildFilterString(minPrice: Double, maxPrice: Double): String {
-        return listOf(
-            "buyingOptions:{AUCTION}",
-            "price:[${minPrice}..${maxPrice}]",
-            "priceCurrency:USD",
-            "soldItemsOnly:true",
-        ).joinToString(",")
+        if (eligible.isEmpty()) return null
+
+        return mapToEntity(eligible.random())
     }
 
     private fun mapToEntity(item: JsonNode): DailyItem {
         val entity = DailyItem()
-        entity.ebayItemId = item.get("itemId")?.asText() ?: ""
-        entity.title = item.get("title")?.asText() ?: "Unknown Item"
-        entity.imageUrl = item.get("image")?.get("imageUrl")?.asText()
-            ?: item.get("thumbnailImages")?.firstOrNull()?.get("imageUrl")?.asText()
-            ?: ""
-        entity.soldPrice = item.get("currentBidPrice")?.get("value")?.asDouble()
-            ?: item.get("price")?.get("value")?.asDouble()
-            ?: 0.0
-        entity.bidCount = item.get("bidCount")?.asInt() ?: 0
-        entity.itemUrl = item.get("itemWebUrl")?.asText() ?: ""
+        entity.ebayItemId = item.get("itemId")?.get(0)?.asText() ?: ""
+        entity.title = item.get("title")?.get(0)?.asText() ?: "Unknown Item"
+        entity.imageUrl = item.get("galleryURL")?.get(0)?.asText() ?: ""
+        entity.soldPrice = item.get("sellingStatus")?.get(0)
+            ?.get("currentPrice")?.get(0)
+            ?.get("__value__")?.asDouble() ?: 0.0
+        entity.bidCount = item.get("listingInfo")?.get(0)
+            ?.get("bidCount")?.get(0)?.asInt() ?: 0
+        entity.itemUrl = item.get("viewItemURL")?.get(0)?.asText() ?: ""
         return entity
     }
 }

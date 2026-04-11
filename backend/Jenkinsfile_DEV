@@ -9,7 +9,6 @@ pipeline {
         DB_USERNAME = credentials('DB_USERNAME')
         DB_PASSWORD = credentials('DB_PASSWORD')
         EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
-        EBAY_CLIENT_SECRET = credentials('MSRP_EBAY_CLIENT_SECRET')
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "/usr/lib/jvm/java-17-openjdk-amd64/bin:${env.PATH}"
     }
@@ -64,9 +63,7 @@ pipeline {
                             spring.jpa.show-sql=false
                             spring.jackson.property-naming-strategy=SNAKE_CASE
                             ebay.client-id=${env.EBAY_CLIENT_ID}
-                            ebay.client-secret=${env.EBAY_CLIENT_SECRET}
-                            ebay.api-base-url=https://api.sandbox.ebay.com
-                            ebay.auth-url=https://api.sandbox.ebay.com/identity/v1/oauth2/token
+                            ebay.finding-api-url=https://svcs.sandbox.ebay.com/services/search/FindingService/v1
                             management.endpoints.web.exposure.include=*
                             management.endpoint.health.show-details=always
                             management.health.defaults.enabled=true
