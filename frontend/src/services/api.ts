@@ -20,7 +20,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export async function fetchTodayItems(): Promise<DailyItem[]> {
-  return request<DailyItem[]>('/today');
+  const d = new Date();
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return request<DailyItem[]>(`/today?date=${date}`);
 }
 
 export async function verifyGuess(payload: VerifyRequest): Promise<VerifyResponse> {

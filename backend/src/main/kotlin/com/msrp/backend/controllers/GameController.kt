@@ -25,8 +25,15 @@ class GameController(
 ) {
 
     @GetMapping("/today")
-    fun getTodayItems(): ResponseEntity<List<DailyItemResponse>> {
-        val items = ebayService.getTodayItems()
+    fun getTodayItems(
+        @RequestParam(required = false) date: String?,
+    ): ResponseEntity<List<DailyItemResponse>> {
+        val gameDate = if (date != null) {
+            try { LocalDate.parse(date) } catch (e: Exception) { LocalDate.now() }
+        } else {
+            LocalDate.now()
+        }
+        val items = ebayService.getItemsForDate(gameDate)
         val response = items.map { dtoConverter.convertToDailyItemResponse(it) }
         return ResponseEntity.ok(response)
     }
@@ -41,12 +48,16 @@ class GameController(
 
     @PostMapping("/admin/curate")
     fun triggerCuration(
-        @RequestParam(defaultValue = "false") forToday: Boolean,
+        @RequestParam(required = false) date: String?,
     ): ResponseEntity<Map<String, String>> {
         return try {
-            ebayService.curateDailyItems(forToday)
-            val target = if (forToday) LocalDate.now() else LocalDate.now().plusDays(1)
-            ResponseEntity.ok(mapOf("message" to "Curation triggered for $target"))
+            val targetDate = if (date != null) {
+                try { LocalDate.parse(date) } catch (e: Exception) { LocalDate.now() }
+            } else {
+                LocalDate.now()
+            }
+            ebayService.curateDailyItems(targetDate)
+            ResponseEntity.ok(mapOf("message" to "Curation triggered for $targetDate"))
         } catch (e: Exception) {
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(mapOf("error" to (e.message ?: "Curation failed")))

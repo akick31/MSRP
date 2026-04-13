@@ -8,7 +8,6 @@ pipeline {
         APP_PROPERTIES = './src/main/resources/application.properties'
         DB_USERNAME = credentials('DB_USERNAME')
         DB_PASSWORD = credentials('DB_PASSWORD')
-        EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "/usr/lib/jvm/java-17-openjdk-amd64/bin:${env.PATH}"
     }
@@ -62,8 +61,6 @@ pipeline {
                             spring.jpa.hibernate.ddl-auto=update
                             spring.jpa.show-sql=false
                             spring.jackson.property-naming-strategy=SNAKE_CASE
-                            ebay.client-id=${env.EBAY_CLIENT_ID}
-                            ebay.finding-api-url=https://svcs.ebay.com/services/search/FindingService/v1
                             management.endpoints.web.exposure.include=*
                             management.endpoint.health.show-details=always
                             management.health.defaults.enabled=true
