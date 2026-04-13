@@ -60,7 +60,7 @@ export default function EndScreen({ results, stats }: EndScreenProps) {
           <div key={i} className="flex items-center gap-3 bg-msrp-card rounded-lg p-3 border border-msrp-border">
             <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getScoreDot(result.score)}`} />
             <div className="flex-1 min-w-0">
-              <div className="text-msrp-text text-sm font-medium truncate">{result.item.title}</div>
+              <div className="text-msrp-text text-sm font-medium">{result.item.title}</div>
               <div className="text-msrp-muted text-xs">
                 Guess: {formatPrice(result.guess)} | Sold: {formatPrice(result.actualPrice)}
               </div>
