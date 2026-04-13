@@ -11,7 +11,9 @@ WORKDIR /app
 
 COPY ./build/libs/*.jar app.jar
 
-RUN java -cp app.jar com.microsoft.playwright.CLI install chromium
+RUN jar xf app.jar BOOT-INF/lib/ && \
+    java -cp "BOOT-INF/lib/*" com.microsoft.playwright.CLI install chromium && \
+    rm -rf BOOT-INF
 
 EXPOSE 1010
 
