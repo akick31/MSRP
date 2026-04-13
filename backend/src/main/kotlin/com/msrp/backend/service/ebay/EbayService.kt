@@ -475,7 +475,9 @@ class EbayService(
 
         for (el in allItems) {
             try {
-                val title = (el.selectFirst(".s-card__title, .s-item__title")?.text() ?: "").trim()
+                val title = (el.selectFirst(".s-card__title, .s-item__title")?.text() ?: "")
+                    .replace("Opens in a new window or tab", "")
+                    .trim()
                 if (title.isBlank() || title == "Shop on eBay") continue
 
                 val itemUrl = el.selectFirst("a.s-card__link, a.s-item__link")?.attr("href") ?: continue
