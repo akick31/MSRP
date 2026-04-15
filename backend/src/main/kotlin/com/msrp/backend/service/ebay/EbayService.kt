@@ -1,13 +1,11 @@
 package com.msrp.backend.service.ebay
 
 import com.microsoft.playwright.BrowserType
-import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
 import com.msrp.backend.repositories.DailyItemRepository
 import com.msrp.backend.util.ItemNotFoundException
-import com.msrp.backend.util.ItemNotFromTodayException
 import com.msrp.backend.util.Logger
 import com.msrp.backend.util.NoItemsAvailableException
 import org.jsoup.Jsoup
@@ -358,10 +356,6 @@ class EbayService(
     fun verifyGuess(itemId: Long, guess: Double): VerifyResponse {
         val item = dailyItemRepository.findById(itemId).orElseThrow {
             ItemNotFoundException()
-        }
-
-        if (item.gameDate != LocalDate.now()) {
-            throw ItemNotFromTodayException()
         }
 
         val percentageOff = (abs(guess - item.soldPrice) / item.soldPrice) * 100.0
