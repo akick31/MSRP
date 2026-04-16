@@ -11,6 +11,7 @@ module.exports = {
           accent: 'var(--msrp-accent)',
           green: 'var(--msrp-green)',
           yellow: 'var(--msrp-yellow)',
+          orange: 'var(--msrp-orange)',
           red: 'var(--msrp-red)',
           muted: 'var(--msrp-muted)',
           border: 'var(--msrp-border)',
