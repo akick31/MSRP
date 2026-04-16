@@ -21,7 +21,6 @@ function loadProgress(gameDate: string): GameProgress | null {
       }
     }
   } catch {
-    // corrupted
   }
   return null;
 }
@@ -35,7 +34,6 @@ export function loadLastResults(): RoundResult[] | null {
     const raw = localStorage.getItem(LAST_RESULTS_KEY);
     if (raw) return JSON.parse(raw);
   } catch {
-    // corrupted
   }
   return null;
 }
@@ -61,8 +59,6 @@ export function useGameState() {
 
         setItems(todayItems);
 
-        // Use the game_date from the items as the canonical date, not the wall clock.
-        // This prevents a midnight rollover locking out a player mid-game.
         const gameDate = todayItems[0]?.game_date ?? getToday();
         const saved = loadProgress(gameDate);
         if (saved && saved.results.length > 0) {

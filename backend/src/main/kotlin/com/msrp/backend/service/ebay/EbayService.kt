@@ -28,7 +28,6 @@ class EbayService(
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
 
         private val SEARCH_CATEGORIES = listOf(
-            // Individual sports
             "baseball",
             "basketball",
             "football",
@@ -69,7 +68,6 @@ class EbayService(
             "darts",
             "curling",
             "table tennis",
-            // Outdoor hobbies
             "fishing",
             "hunting",
             "camping",
@@ -80,7 +78,6 @@ class EbayService(
             "rock climbing",
             "birdwatching",
             "metal detecting",
-            // Musical instruments
             "guitar",
             "bass guitar",
             "electric guitar",
@@ -102,7 +99,6 @@ class EbayService(
             "trombone",
             "tuba",
             "guitar amplifier",
-            // Collecting hobbies
             "trading cards",
             "pokemon cards",
             "magic the gathering",
@@ -122,7 +118,6 @@ class EbayService(
             "action figures",
             "lego",
             "model trains",
-            // Video games
             "video games",
             "retro video games",
             "nintendo",
@@ -130,7 +125,6 @@ class EbayService(
             "xbox",
             "sega",
             "atari",
-            // Electronics & tech
             "vintage electronics",
             "vintage radio",
             "ham radio",
@@ -141,12 +135,10 @@ class EbayService(
             "oscilloscope",
             "vintage typewriter",
             "vintage calculator",
-            // Cameras & photography
             "film camera",
             "vintage camera",
             "camera lens",
             "darkroom equipment",
-            // Jewelry & accessories
             "jewelry",
             "watches",
             "vintage watches",
@@ -157,7 +149,6 @@ class EbayService(
             "vintage clothing",
             "vintage denim",
             "vintage band tee",
-            // Home & antiques
             "antique furniture",
             "vintage lamps",
             "vintage clocks",
@@ -170,7 +161,6 @@ class EbayService(
             "vintage sewing machines",
             "vintage tools",
             "vintage locks",
-            // Toys & games
             "board games",
             "pinball machines",
             "arcade machines",
@@ -178,13 +168,11 @@ class EbayService(
             "remote control cars",
             "vintage toys",
             "vintage barbie",
-            // Art & crafts
             "oil paintings",
             "sculpture",
             "native american art",
             "taxidermy",
             "vintage maps",
-            // Misc hobbies
             "telescopes",
             "microscopes",
             "scientific instruments",
@@ -193,7 +181,6 @@ class EbayService(
             "motorcycle parts",
             "reading books first edition",
             "vintage medical equipment",
-            // Major sporting events
             "super bowl",
             "world series",
             "nba finals",
@@ -212,7 +199,6 @@ class EbayService(
             "college football championship",
             "march madness",
             "world series of poker",
-            // Music & cultural events
             "coachella",
             "woodstock",
             "grateful dead",
@@ -222,19 +208,16 @@ class EbayService(
             "michael jackson",
             "concert tour",
             "grammy awards",
-            // Cultural events & festivals
             "burning man",
             "oktoberfest",
             "mardi gras",
             "world expo",
             "world fair",
-            // Other major events
             "presidential inauguration",
             "space shuttle",
             "apollo moon landing",
             "world war ii",
             "civil war",
-            // Astronomy & space
             "telescope",
             "astronomy",
             "astrophotography",
@@ -243,7 +226,6 @@ class EbayService(
             "planetarium",
             "space memorabilia",
             "nasa",
-            // Pets & animals
             "cat",
             "dog",
             "aquarium",
@@ -252,7 +234,6 @@ class EbayService(
             "horse tack",
             "pet memorabilia",
             "taxidermy fish",
-            // Brewing & spirits
             "home brewing",
             "beer brewing",
             "wine making",
@@ -262,14 +243,12 @@ class EbayService(
             "cocktail shaker",
             "vintage wine",
             "distilling equipment",
-            // Cycling & biking
             "bicycle",
             "road bike",
             "mountain bike",
             "bmx bike",
             "vintage bicycle",
             "cycling equipment",
-            // Nature & gardening
             "gardening",
             "bonsai",
             "vintage garden",
@@ -279,45 +258,38 @@ class EbayService(
             "mineral specimen",
             "crystal",
             "meteorite",
-            // Cooking & food
             "cast iron cookware",
             "vintage kitchen",
             "copper cookware",
             "vintage cookbook",
             "espresso machine",
             "coffee grinder",
-            // Woodworking & making
             "woodworking",
             "hand planes",
             "vintage drill press",
             "lathe",
             "vintage saw",
-            // Fashion & style
             "vintage sunglasses",
             "vintage belt",
             "vintage boots",
             "vintage scarf",
             "vintage wallet",
             "luxury handbag",
-            // Travel & adventure
             "vintage luggage",
             "vintage globe",
             "vintage map",
             "travel memorabilia",
             "vintage compass",
-            // Reading & literature
             "first edition book",
             "vintage magazine",
             "signed book",
             "pulp fiction magazine",
             "vintage newspaper",
-            // Gaming & puzzles
             "vintage puzzle",
             "chess set",
             "vintage card game",
             "tabletop rpg",
             "dungeons and dragons",
-            // Cars & automotive
             "vintage car parts",
             "porsche parts",
             "mustang parts",
@@ -325,13 +297,11 @@ class EbayService(
             "vintage hood ornament",
             "gas station memorabilia",
             "vintage license plate",
-            // Science & education
             "vintage microscope",
             "vintage chemistry set",
             "vintage slide rule",
             "vintage globe",
             "vintage anatomy",
-            // Spirituality & culture
             "vintage religious",
             "tibetan singing bowl",
             "vintage tarot",
@@ -360,16 +330,6 @@ class EbayService(
 
         val percentageOff = (abs(guess - item.soldPrice) / item.soldPrice) * 100.0
         val roundedPercentageOff = Math.round(percentageOff * 100.0) / 100.0
-        // Continuous log-linear hybrid scoring.
-        // LogPenalty    = 10 * ln(R)               — penalizes ratio, symmetric over/under
-        // ScalePenalty  = 10 * |A-G| / (10+0.1*A) — penalizes absolute dollar gap, normalized by price
-        // Together they give cheap items leniency (small scale denom) and punish large dollar
-        // misses on expensive items without a cliff effect between tiers.
-        //
-        // Verified targets:
-        //   $15 on $7    → ~85  (forgiving: small absolute gap, cheap item)
-        //   $600 on $350 → ~41  (tough: large absolute gap on expensive item)
-        //   $150 on $100 → ~72  (fair: moderate gap, mid-range item)
         if (Math.abs(guess - item.soldPrice) <= 1.0) {
             return VerifyResponse(itemId = item.id, guess = guess, actualPrice = item.soldPrice, percentageOff = roundedPercentageOff, score = 100)
         }
@@ -507,7 +467,6 @@ class EbayService(
                     ?: imgEl?.attr("data-src")?.takeIf { it.startsWith("http") }
                     ?: continue
 
-                // Pre-filter: if bid count is visible in the card and below threshold, skip without loading item page
                 val cardBidCount = BID_COUNT_REGEX.find(el.text())?.groupValues?.get(1)?.toIntOrNull()
                 if (cardBidCount != null && cardBidCount < MIN_BID_COUNT) continue
 

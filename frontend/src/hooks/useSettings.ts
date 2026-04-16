@@ -12,7 +12,6 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) return JSON.parse(raw);
   } catch {
-    // corrupted
   }
   return { darkMode: true, highContrast: false };
 }

@@ -26,7 +26,6 @@ class DTOConverter {
         val multipliers = listOf(0.25, 0.5, 2.5)
         for (m in multipliers) {
             var decoy = roundToNicePrice(actualPrice * m)
-            // Avoid duplicates with actual price or each other
             if (decoy == actualPrice || decoys.contains(decoy)) {
                 decoy = roundToNicePrice(actualPrice * m * 1.1)
             }

@@ -24,7 +24,6 @@ function loadStats(): PlayerStats {
       return JSON.parse(raw);
     }
   } catch {
-    // corrupted data, reset
   }
   return {
     currentStreak: 0,
