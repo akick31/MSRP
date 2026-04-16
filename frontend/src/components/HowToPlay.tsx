@@ -30,7 +30,7 @@ export default function HowToPlay({ open, onClose }: HowToPlayProps) {
 
         <div className="border-t border-msrp-border pt-4">
           <p className="font-medium text-msrp-text mb-2">Scoring</p>
-          <p className="text-xs mb-3">Scoring is based on how close you are <span className="text-msrp-text">relative</span> to the actual price — not the raw dollar difference. This keeps it fair whether an item sold for $10 or $1,000.</p>
+          <p className="text-xs mb-3">Scoring is based on how close you are <span className="text-msrp-text">relative</span> to the actual price.</p>
           <div className="space-y-1.5 mb-3">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-green flex-shrink-0" />
@@ -38,14 +38,13 @@ export default function HowToPlay({ open, onClose }: HowToPlayProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-yellow flex-shrink-0" />
-              <span>50-79: In the ballpark (within ~2×)</span>
+              <span>50-79: Ballpark</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-red flex-shrink-0" />
-              <span>0-49: Way off (more than 2× away)</span>
+              <span>0-49: Way off</span>
             </div>
           </div>
-          <p className="text-xs text-msrp-muted">Example: actual $100 → guess $50 or $200 earns ~67 pts. Guess $25 or $400 earns ~34 pts.</p>
         </div>
 
         <div className="border-t border-msrp-border pt-4">
