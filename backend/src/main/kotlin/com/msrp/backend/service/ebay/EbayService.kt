@@ -360,10 +360,28 @@ class EbayService(
 
         val percentageOff = (abs(guess - item.soldPrice) / item.soldPrice) * 100.0
         val roundedPercentageOff = Math.round(percentageOff * 100.0) / 100.0
-        // Logarithmic ratio scoring: symmetric whether over or under, fair across price ranges.
-        // 2x off = 50pts, 4x off = 0pts. Naturally forgives absolute dollar errors on cheap items.
+        // Continuous log-linear hybrid scoring.
+        // LogPenalty    = 10 * ln(R)               — penalizes ratio, symmetric over/under
+        // ScalePenalty  = 10 * |A-G| / (10+0.1*A) — penalizes absolute dollar gap, normalized by price
+        // Together they give cheap items leniency (small scale denom) and punish large dollar
+        // misses on expensive items without a cliff effect between tiers.
+        //
+        // Verified targets:
+        //   $15 on $7    → ~85  (forgiving: small absolute gap, cheap item)
+        //   $600 on $350 → ~41  (tough: large absolute gap on expensive item)
+        //   $150 on $100 → ~72  (fair: moderate gap, mid-range item)
+        if (Math.abs(guess - item.soldPrice) <= 1.0) {
+            return VerifyResponse(itemId = item.id, guess = guess, actualPrice = item.soldPrice, percentageOff = roundedPercentageOff, score = 100)
+        }
         val ratio = if (guess > 0) maxOf(guess / item.soldPrice, item.soldPrice / guess) else Double.MAX_VALUE
-        val score = max(0, (100 - 50 * (Math.log(ratio) / Math.log(2.0))).toInt())
+        val logPenalty = 10.0 * Math.log(ratio)
+        val scalePenalty = 10.0 * Math.abs(guess - item.soldPrice) / (10.0 + 0.1 * item.soldPrice)
+        val rawScore = 100.0 - logPenalty - scalePenalty
+        val score = when {
+            rawScore >= 95 -> 100
+            rawScore < 0   -> 0
+            else           -> rawScore.toInt()
+        }
 
         return VerifyResponse(
             itemId = item.id,

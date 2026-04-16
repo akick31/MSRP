@@ -45,7 +45,7 @@ export default function HowToPlay({ open, onClose }: HowToPlayProps) {
               <span>0-49: Way off (more than 2× away)</span>
             </div>
           </div>
-          <p className="text-xs text-msrp-muted">Example: actual price $100 → guessing $50 or $200 earns 50 pts. Guessing $400 earns 0 pts.</p>
+          <p className="text-xs text-msrp-muted">Example: actual $100 → guess $50 or $200 earns ~67 pts. Guess $25 or $400 earns ~34 pts.</p>
         </div>
 
         <div className="border-t border-msrp-border pt-4">
