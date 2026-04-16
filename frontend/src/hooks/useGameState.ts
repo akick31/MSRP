@@ -11,12 +11,12 @@ function getToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function loadProgress(): GameProgress | null {
+function loadProgress(gameDate: string): GameProgress | null {
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
     if (raw) {
       const progress: GameProgress = JSON.parse(raw);
-      if (progress.date === getToday()) {
+      if (progress.date === gameDate) {
         return progress;
       }
     }
@@ -61,7 +61,10 @@ export function useGameState() {
 
         setItems(todayItems);
 
-        const saved = loadProgress();
+        // Use the game_date from the items as the canonical date, not the wall clock.
+        // This prevents a midnight rollover locking out a player mid-game.
+        const gameDate = todayItems[0]?.game_date ?? getToday();
+        const saved = loadProgress(gameDate);
         if (saved && saved.results.length > 0) {
           setResults(saved.results);
           if (saved.currentRound >= TOTAL_ROUNDS) {
@@ -112,7 +115,7 @@ export function useGameState() {
       setGameState('revealing');
 
       saveProgress({
-        date: getToday(),
+        date: items[0]?.game_date ?? getToday(),
         currentRound: nextRound,
         results: newResults,
       });

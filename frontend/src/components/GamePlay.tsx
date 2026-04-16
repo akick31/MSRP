@@ -24,7 +24,6 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
   async function handleSubmit() {
     const guess = parseFloat(input);
     if (isNaN(guess) || guess <= 0) return;
-
     setSubmitting(true);
     await onSubmit(guess);
     setSubmitting(false);
@@ -32,9 +31,7 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
-      handleSubmit();
-    }
+    if (e.key === 'Enter') handleSubmit();
   }
 
   const guessValue = parseFloat(input);
@@ -77,7 +74,6 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
                 className="w-full bg-msrp-bg border border-msrp-border rounded-lg pl-8 pr-3 py-3 text-msrp-text text-lg font-medium placeholder-msrp-border focus:outline-none focus:border-msrp-accent transition-colors"
               />
             </div>
-
             <button
               onClick={handleSubmit}
               disabled={!isValid || submitting}

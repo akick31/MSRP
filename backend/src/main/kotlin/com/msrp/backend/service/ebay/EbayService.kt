@@ -360,7 +360,10 @@ class EbayService(
 
         val percentageOff = (abs(guess - item.soldPrice) / item.soldPrice) * 100.0
         val roundedPercentageOff = Math.round(percentageOff * 100.0) / 100.0
-        val score = max(0, (100 - percentageOff).roundToInt())
+        // Logarithmic ratio scoring: symmetric whether over or under, fair across price ranges.
+        // 2x off = 50pts, 4x off = 0pts. Naturally forgives absolute dollar errors on cheap items.
+        val ratio = if (guess > 0) maxOf(guess / item.soldPrice, item.soldPrice / guess) else Double.MAX_VALUE
+        val score = max(0, (100 - 50 * (Math.log(ratio) / Math.log(2.0))).toInt())
 
         return VerifyResponse(
             itemId = item.id,

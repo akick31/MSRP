@@ -1,10 +1,12 @@
 export interface DailyItem {
   id: number;
   ebay_item_id: string;
+  game_date: string;
   title: string;
   image_url: string;
   bid_count: number;
   item_url: string;
+  price_choices: number[];
 }
 
 export interface VerifyRequest {
