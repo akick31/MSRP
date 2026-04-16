@@ -1,9 +1,10 @@
 import { RoundResult } from '../types';
 
 function scoreToEmoji(score: number): string {
-  if (score >= 80) return '\u{1F7E9}';
-  if (score >= 50) return '\u{1F7E8}';
-  return '\u{1F7E5}';
+  if (score >= 90) return '\u{1F7E9}';
+  if (score >= 70) return '\u{1F7E8}';
+  if (score >= 40) return '\u{1F7E0}';
+  return '\u{1F534}';
 }
 
 export function buildShareText(results: RoundResult[], streak: number): string {

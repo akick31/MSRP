@@ -12,14 +12,16 @@ function formatPrice(price: number): string {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-msrp-green';
-  if (score >= 50) return 'text-msrp-yellow';
+  if (score >= 90) return 'text-msrp-green';
+  if (score >= 70) return 'text-msrp-yellow';
+  if (score >= 40) return 'text-msrp-orange';
   return 'text-msrp-red';
 }
 
 function getScoreDot(score: number): string {
-  if (score >= 80) return 'bg-msrp-green';
-  if (score >= 50) return 'bg-msrp-yellow';
+  if (score >= 90) return 'bg-msrp-green';
+  if (score >= 70) return 'bg-msrp-yellow';
+  if (score >= 40) return 'bg-msrp-orange';
   return 'bg-msrp-red';
 }
 

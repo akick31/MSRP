@@ -34,15 +34,19 @@ export default function HowToPlay({ open, onClose }: HowToPlayProps) {
           <div className="space-y-1.5 mb-3">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-green flex-shrink-0" />
-              <span>80-100: Very close</span>
+              <span>90–100: Very close</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-yellow flex-shrink-0" />
-              <span>50-79: Ballpark</span>
+              <span>70–89: Ballpark</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-msrp-orange flex-shrink-0" />
+              <span>40–69: Getting Cold</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-msrp-red flex-shrink-0" />
-              <span>0-49: Way off</span>
+              <span>0–39: Way Off</span>
             </div>
           </div>
         </div>

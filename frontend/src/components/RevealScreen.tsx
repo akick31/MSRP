@@ -9,14 +9,16 @@ interface RevealScreenProps {
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-msrp-green';
-  if (score >= 50) return 'text-msrp-yellow';
+  if (score >= 90) return 'text-msrp-green';
+  if (score >= 70) return 'text-msrp-yellow';
+  if (score >= 40) return 'text-msrp-orange';
   return 'text-msrp-red';
 }
 
 function getScoreBg(score: number): string {
-  if (score >= 80) return 'bg-msrp-green/10 border-msrp-green/30';
-  if (score >= 50) return 'bg-msrp-yellow/10 border-msrp-yellow/30';
+  if (score >= 90) return 'bg-msrp-green/10 border-msrp-green/30';
+  if (score >= 70) return 'bg-msrp-yellow/10 border-msrp-yellow/30';
+  if (score >= 40) return 'bg-msrp-orange/10 border-msrp-orange/30';
   return 'bg-msrp-red/10 border-msrp-red/30';
 }
 
