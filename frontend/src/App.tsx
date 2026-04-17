@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getPuzzleNumber } from './utils/share';
 import { useGameState, loadLastResults } from './hooks/useGameState';
 import { useStats } from './hooks/useStats';
 import { useSettings } from './hooks/useSettings';
@@ -13,14 +14,6 @@ import StatsModal from './components/StatsModal';
 import SettingsModal from './components/SettingsModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
-
-function getPuzzleNumber(): number {
-  const launch = new Date('2026-03-26');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  launch.setHours(0, 0, 0, 0);
-  return Math.floor((today.getTime() - launch.getTime()) / 86400000) + 1;
-}
 
 export default function App() {
   const { items, currentRound, results, gameState, error, startGame, submitGuess, nextRound, totalRounds } = useGameState();
