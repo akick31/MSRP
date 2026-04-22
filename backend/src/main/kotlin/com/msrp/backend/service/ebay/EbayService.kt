@@ -3,7 +3,6 @@ package com.msrp.backend.service.ebay
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
-import com.microsoft.playwright.options.WaitForSelectorState
 import com.microsoft.playwright.options.WaitUntilState
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
@@ -32,6 +31,20 @@ class EbayService(
         private const val MAX_SERP_PAGES = 3
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
 
+        /** Poll interval / attempts while SERP JS hydrates (avoid long waitForSelector + content() crashes). */
+        private const val SERP_POLL_MS = 450L
+        private const val SERP_POLL_MAX_ATTEMPTS = 32
+
+        /** Count item links in the main results column (not nav chrome). */
+        private val SERP_ITM_LINK_COUNT_JS =
+            """
+            () => {
+              const q = "ul.srp-results a[href*='/itm/'], .srp-river-results a[href*='/itm/'], " +
+                "ul[class*='srp-results'] a[href*='/itm/']";
+              return document.querySelectorAll(q).length;
+            }
+            """.trimIndent()
+
         /** SERP cards are mostly client-rendered; these cover list + magazine layouts. */
         private val SERP_CARD_SELECTORS = listOf(
             "ul.srp-results > li.s-card",
@@ -41,10 +54,10 @@ class EbayService(
             "li.s-card",
             "li.s-item",
             "li[data-listingid]",
+            ".srp-river-results li.s-card",
+            ".srp-river-results li.s-item",
+            "div.s-card",
         )
-
-        private val SERP_WAIT_SELECTOR =
-            "ul.srp-results li, li.s-card, li.s-item, li[data-listingid]"
 
         private val SEARCH_CATEGORIES = listOf(
             "baseball",
@@ -387,6 +400,7 @@ class EbayService(
             playwright.chromium().launch(
                 BrowserType.LaunchOptions()
                     .setHeadless(true)
+                    .setChromiumSandbox(false)
                     .setArgs(listOf(
                         "--no-sandbox",
                         "--disable-dev-shm-usage",
@@ -459,6 +473,35 @@ class EbayService(
         }
     }
 
+    /** Short polling instead of a single 45s waitForSelector (less tab memory pressure, fewer Target crashes). */
+    private fun waitForSerpItmLinks(page: Page, keyword: String, pageNumber: Int) {
+        repeat(SERP_POLL_MAX_ATTEMPTS) {
+            try {
+                val v = page.evaluate(SERP_ITM_LINK_COUNT_JS)
+                val count = when (v) {
+                    is Int -> v
+                    is Long -> v.toInt()
+                    is Number -> v.toInt()
+                    else -> 0
+                }
+                if (count >= 2) return
+            } catch (_: Exception) {
+                return
+            }
+            try {
+                page.waitForTimeout(SERP_POLL_MS.toDouble())
+            } catch (_: Exception) {
+                return
+            }
+        }
+        Logger.warn(
+            "Few SERP /itm/ links after ~{}ms polling for '{}' page {} — parsing DOM as-is",
+            SERP_POLL_MS * SERP_POLL_MAX_ATTEMPTS,
+            keyword,
+            pageNumber,
+        )
+    }
+
     private fun scrapeCompletedAuctions(browser: com.microsoft.playwright.Browser, keyword: String, pageNumber: Int): List<DailyItem> {
         val encoded = URLEncoder.encode(keyword, "UTF-8")
         val url =
@@ -468,29 +511,30 @@ class EbayService(
             val page = browser.newPage()
             page.use {
                 it.setDefaultNavigationTimeout(60_000.0)
+                it.setViewportSize(1280, 720)
                 it.setExtraHTTPHeaders(
                     mapOf(
                         "Accept-Language" to "en-US,en;q=0.9",
                     ),
                 )
-                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED).setTimeout(60_000.0))
+                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
+                waitForSerpItmLinks(it, keyword, pageNumber)
                 try {
-                    it.waitForSelector(
-                        SERP_WAIT_SELECTOR,
-                        Page.WaitForSelectorOptions()
-                            .setTimeout(45_000.0)
-                            .setState(WaitForSelectorState.ATTACHED),
-                    )
+                    it.waitForTimeout(400.0)
+                } catch (_: Exception) {
+                    /* tab may already be closing */
+                }
+                try {
+                    it.content()
                 } catch (e: Exception) {
-                    Logger.warn(
-                        "Timed out waiting for SERP listing markup for '{}' page {}: {}",
+                    Logger.error(
+                        "page.content() crashed for '{}' page {}: {}",
                         keyword,
                         pageNumber,
                         e.message,
                     )
+                    return emptyList()
                 }
-                it.waitForTimeout(1_500.0)
-                it.content()
             }
         } catch (e: Exception) {
             Logger.error("Playwright failed for keyword '{}': {}", keyword, e.message)
