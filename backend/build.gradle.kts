@@ -24,7 +24,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.jsoup:jsoup:1.17.2")
-    implementation("com.microsoft.playwright:playwright:1.44.0")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

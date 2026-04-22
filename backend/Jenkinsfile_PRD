@@ -98,7 +98,7 @@ pipeline {
                 script {
                     echo 'Starting the new MSRP Backend container...'
                     sh """
-                        docker run --network="host" --ipc=host --init -d --restart=always --name ${CONTAINER_NAME} \
+                        docker run --network="host" -d --restart=always --name ${CONTAINER_NAME} \
                             ${IMAGE_NAME}:${DOCKERFILE}
                     """
                 }

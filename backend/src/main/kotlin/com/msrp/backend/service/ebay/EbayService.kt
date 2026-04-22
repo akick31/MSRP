@@ -1,9 +1,5 @@
 package com.msrp.backend.service.ebay
 
-import com.microsoft.playwright.BrowserType
-import com.microsoft.playwright.Page
-import com.microsoft.playwright.Playwright
-import com.microsoft.playwright.options.WaitUntilState
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
 import com.msrp.backend.repositories.DailyItemRepository
@@ -12,7 +8,13 @@ import com.msrp.backend.util.Logger
 import com.msrp.backend.util.NoItemsAvailableException
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Service
+import java.net.CookieManager
+import java.net.URI
 import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.time.Duration
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.max
@@ -26,26 +28,23 @@ class EbayService(
     companion object {
         private const val ITEMS_PER_DAY = 5
         private const val MIN_BID_COUNT = 5
-        /** Max item detail pages to open per keyword (after merging SERP pages). */
-        private const val MAX_ITEM_PAGE_CHECKS = 15
         private const val MAX_SERP_PAGES = 3
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
 
-        /** Poll interval / attempts while SERP JS hydrates (avoid long waitForSelector + content() crashes). */
-        private const val SERP_POLL_MS = 450L
-        private const val SERP_POLL_MAX_ATTEMPTS = 32
+        /** Real desktop Chrome on macOS — eBay serves SSR listings to it. */
+        private const val DESKTOP_UA =
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-        /** Count item links in the main results column (not nav chrome). */
-        private val SERP_ITM_LINK_COUNT_JS =
-            """
-            () => {
-              const q = "ul.srp-results a[href*='/itm/'], .srp-river-results a[href*='/itm/'], " +
-                "ul[class*='srp-results'] a[href*='/itm/']";
-              return document.querySelectorAll(q).length;
-            }
-            """.trimIndent()
+        /** iPhone Safari — m.ebay.com responds with very lightweight, server-rendered cards. */
+        private const val MOBILE_UA =
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 " +
+                "(KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
 
-        /** SERP cards are mostly client-rendered; these cover list + magazine layouts. */
+        private val HTTP_REQUEST_TIMEOUT: Duration = Duration.ofSeconds(20)
+        private val HTTP_CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
+
+        /** SERP cards across desktop list/magazine + mobile layouts. */
         private val SERP_CARD_SELECTORS = listOf(
             "ul.srp-results > li.s-card",
             "ul.srp-results > li.s-item",
@@ -57,6 +56,9 @@ class EbayService(
             ".srp-river-results li.s-card",
             ".srp-river-results li.s-item",
             "div.s-card",
+            // Mobile site
+            "li.brwrvr__item-card",
+            "div.brwrvr__item-card",
         )
 
         private val SEARCH_CATEGORIES = listOf(
@@ -343,6 +345,13 @@ class EbayService(
         )
     }
 
+    /** HTTP client shared across calls; auto-follows 30x and keeps cookies (eBay sets consent + session). */
+    private val httpClient: HttpClient = HttpClient.newBuilder()
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .connectTimeout(HTTP_CONNECT_TIMEOUT)
+        .cookieHandler(CookieManager())
+        .build()
+
     fun getTodayItems(): List<DailyItem> {
         return getItemsForDate(LocalDate.now())
     }
@@ -396,70 +405,60 @@ class EbayService(
         val curatedItems = existing.toMutableList()
         val shuffledCategories = SEARCH_CATEGORIES.shuffled().toMutableList()
 
-        Playwright.create().use { playwright ->
-            playwright.chromium().launch(
-                BrowserType.LaunchOptions()
-                    .setHeadless(true)
-                    .setChromiumSandbox(false)
-                    .setArgs(listOf(
-                        "--no-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-gpu",
-                        "--disable-extensions",
-                        "--disable-background-networking",
-                        "--disable-sync",
-                        "--no-first-run",
-                    ))
-            ).use { browser ->
-                while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
-                    val keyword = shuffledCategories.removeFirst()
-                    val candidatesById = linkedMapOf<String, DailyItem>()
-                    val pageOrder = (1..MAX_SERP_PAGES).shuffled()
-                    for (pageNumber in pageOrder) {
-                        Logger.info(
-                            "Scraping '{}' page {}/{} ({}/{})",
-                            keyword,
-                            pageNumber,
-                            MAX_SERP_PAGES,
-                            curatedItems.size + 1,
-                            ITEMS_PER_DAY,
-                        )
-                        for (item in scrapeCompletedAuctions(browser, keyword, pageNumber)) {
-                            if (item.ebayItemId !in candidatesById) {
-                                candidatesById[item.ebayItemId] = item
-                            }
-                        }
-                    }
-                    val candidates = candidatesById.values.toList()
-                    if (candidates.isEmpty()) {
-                        Logger.warn("No eligible SERP rows for keyword '{}' (tried pages {})", keyword, pageOrder.joinToString())
-                        continue
-                    }
-                    Logger.info("{} unique SERP candidates for '{}' after {} pages", candidates.size, keyword, pageOrder.size)
-
-                    var picked = false
-                    var itemPageChecks = 0
-                    for (candidate in candidates.shuffled()) {
-                        if (candidate.ebayItemId in usedIds) continue
-                        if (itemPageChecks >= MAX_ITEM_PAGE_CHECKS) break
-                        itemPageChecks++
-                        val bidCount = scrapeItemBidCount(browser, candidate.itemUrl)
-                        if (bidCount < MIN_BID_COUNT) {
-                            Logger.info("Skipping '{}' — only {} bids", candidate.title.take(50), bidCount)
-                            continue
-                        }
-                        candidate.bidCount = bidCount
-                        candidate.gameDate = targetDate
-                        curatedItems.add(candidate)
-                        usedIds.add(candidate.ebayItemId)
-                        Logger.info("Selected item: {} at {} ({} bids)", candidate.title, candidate.soldPrice, bidCount)
-                        picked = true
-                        break
-                    }
-                    if (!picked) {
-                        Logger.warn("No item with >= {} bids found for '{}'", MIN_BID_COUNT, keyword)
+        while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
+            val keyword = shuffledCategories.removeFirst()
+            val candidatesById = linkedMapOf<String, DailyItem>()
+            val pageOrder = (1..MAX_SERP_PAGES).shuffled()
+            for (pageNumber in pageOrder) {
+                Logger.info(
+                    "Scraping '{}' page {}/{} ({}/{})",
+                    keyword,
+                    pageNumber,
+                    MAX_SERP_PAGES,
+                    curatedItems.size + 1,
+                    ITEMS_PER_DAY,
+                )
+                for (item in scrapeCompletedAuctions(keyword, pageNumber)) {
+                    if (item.ebayItemId !in candidatesById) {
+                        candidatesById[item.ebayItemId] = item
                     }
                 }
+            }
+            val candidates = candidatesById.values.toList()
+            if (candidates.isEmpty()) {
+                Logger.warn(
+                    "No eligible SERP rows for keyword '{}' (tried pages {})",
+                    keyword,
+                    pageOrder.joinToString(),
+                )
+                continue
+            }
+            Logger.info(
+                "{} unique SERP candidates for '{}' after {} pages",
+                candidates.size,
+                keyword,
+                pageOrder.size,
+            )
+
+            var picked = false
+            for (candidate in candidates.shuffled()) {
+                if (candidate.ebayItemId in usedIds) continue
+                // SERP already exposes the final bid count on auction cards; no per-item fetch needed.
+                if (candidate.bidCount < MIN_BID_COUNT) continue
+                candidate.gameDate = targetDate
+                curatedItems.add(candidate)
+                usedIds.add(candidate.ebayItemId)
+                Logger.info(
+                    "Selected item: {} at {} ({} bids)",
+                    candidate.title,
+                    candidate.soldPrice,
+                    candidate.bidCount,
+                )
+                picked = true
+                break
+            }
+            if (!picked) {
+                Logger.warn("No item with >= {} bids found for '{}'", MIN_BID_COUNT, keyword)
             }
         }
 
@@ -473,88 +472,76 @@ class EbayService(
         }
     }
 
-    /** Short polling instead of a single 45s waitForSelector (less tab memory pressure, fewer Target crashes). */
-    private fun waitForSerpItmLinks(page: Page, keyword: String, pageNumber: Int) {
-        repeat(SERP_POLL_MAX_ATTEMPTS) {
-            try {
-                val v = page.evaluate(SERP_ITM_LINK_COUNT_JS)
-                val count = when (v) {
-                    is Int -> v
-                    is Long -> v.toInt()
-                    is Number -> v.toInt()
-                    else -> 0
-                }
-                if (count >= 2) return
-            } catch (_: Exception) {
-                return
+    /** Fetch SERP HTML over plain HTTP (no headless Chrome, no hangs, no crashes). */
+    private fun fetchHtml(url: String, userAgent: String, referer: String?): String? {
+        val builder = HttpRequest.newBuilder(URI.create(url))
+            .timeout(HTTP_REQUEST_TIMEOUT)
+            .GET()
+            .header("User-Agent", userAgent)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .header("Accept-Encoding", "gzip, deflate")
+            .header("Upgrade-Insecure-Requests", "1")
+            .header("Cache-Control", "no-cache")
+            .header("Pragma", "no-cache")
+            .header("DNT", "1")
+        if (referer != null) builder.header("Referer", referer)
+
+        return try {
+            val response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray())
+            if (response.statusCode() !in 200..299) {
+                Logger.warn("HTTP {} fetching {}", response.statusCode(), url)
+                return null
             }
-            try {
-                page.waitForTimeout(SERP_POLL_MS.toDouble())
-            } catch (_: Exception) {
-                return
+            val encoding = response.headers().firstValue("Content-Encoding").orElse("").lowercase()
+            val raw = response.body()
+            val bytes = when (encoding) {
+                "gzip" -> java.util.zip.GZIPInputStream(raw.inputStream()).use { it.readBytes() }
+                "deflate" -> java.util.zip.InflaterInputStream(raw.inputStream()).use { it.readBytes() }
+                else -> raw
             }
+            String(bytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            Logger.warn("HTTP fetch failed for {}: {}", url, e.message)
+            null
         }
-        Logger.warn(
-            "Few SERP /itm/ links after ~{}ms polling for '{}' page {} — parsing DOM as-is",
-            SERP_POLL_MS * SERP_POLL_MAX_ATTEMPTS,
-            keyword,
-            pageNumber,
-        )
     }
 
-    private fun scrapeCompletedAuctions(browser: com.microsoft.playwright.Browser, keyword: String, pageNumber: Int): List<DailyItem> {
+    private fun scrapeCompletedAuctions(keyword: String, pageNumber: Int): List<DailyItem> {
         val encoded = URLEncoder.encode(keyword, "UTF-8")
-        val url =
+
+        // Try desktop first — it's the richest markup. Fall back to mobile if eBay returns a shell/bot page.
+        val desktopUrl =
             "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60&rt=nc"
+        val mobileUrl =
+            "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60&_sop=13"
 
-        val html = try {
-            val page = browser.newPage()
-            page.use {
-                it.setDefaultNavigationTimeout(60_000.0)
-                it.setViewportSize(1280, 720)
-                it.setExtraHTTPHeaders(
-                    mapOf(
-                        "Accept-Language" to "en-US,en;q=0.9",
-                    ),
-                )
-                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
-                waitForSerpItmLinks(it, keyword, pageNumber)
-                try {
-                    it.waitForTimeout(400.0)
-                } catch (_: Exception) {
-                    /* tab may already be closing */
-                }
-                try {
-                    it.content()
-                } catch (e: Exception) {
-                    Logger.error(
-                        "page.content() crashed for '{}' page {}: {}",
-                        keyword,
-                        pageNumber,
-                        e.message,
-                    )
-                    return emptyList()
-                }
-            }
-        } catch (e: Exception) {
-            Logger.error("Playwright failed for keyword '{}': {}", keyword, e.message)
-            return emptyList()
-        }
+        var html = fetchHtml(desktopUrl, DESKTOP_UA, referer = "https://www.ebay.com/")
+        var rows = html?.let { parseSerpRows(it) }.orEmpty()
 
-        val doc = Jsoup.parse(html)
-        val allItems = collectSerpListingElements(doc)
-        if (allItems.isEmpty()) {
-            Logger.warn(
-                "SERP returned no list rows for '{}' page {} (layout change, bot/captcha page, or empty results — not a date filter)",
+        if (rows.isEmpty()) {
+            Logger.info(
+                "Desktop SERP empty for '{}' page {} — retrying as mobile",
                 keyword,
                 pageNumber,
             )
+            html = fetchHtml(mobileUrl, MOBILE_UA, referer = "https://m.ebay.com/")
+            rows = html?.let { parseSerpRows(it) }.orEmpty()
+        }
+
+        if (rows.isEmpty()) {
+            Logger.warn(
+                "SERP returned no list rows for '{}' page {} (layout change, bot/captcha, or empty results)",
+                keyword,
+                pageNumber,
+            )
+            return emptyList()
         }
 
         val results = mutableListOf<DailyItem>()
         val seenItemIds = mutableSetOf<String>()
 
-        for (el in allItems) {
+        for (el in rows) {
             try {
                 val title = extractSerpTitle(el)
                 if (title.isBlank() || title == "Shop on eBay") continue
@@ -572,7 +559,8 @@ class EbayService(
                 val imageUrl = firstImageUrlFromImg(el.selectFirst("img")) ?: continue
 
                 val cardBidCount = BID_COUNT_REGEX.find(el.text())?.groupValues?.get(1)?.toIntOrNull()
-                if (cardBidCount != null && cardBidCount < MIN_BID_COUNT) continue
+                    ?: continue
+                if (cardBidCount < MIN_BID_COUNT) continue
 
                 seenItemIds.add(itemId)
                 val entity = DailyItem()
@@ -580,7 +568,7 @@ class EbayService(
                 entity.title = title
                 entity.imageUrl = imageUrl
                 entity.soldPrice = soldPrice
-                entity.bidCount = cardBidCount ?: 0
+                entity.bidCount = cardBidCount
                 entity.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
                 results.add(entity)
             } catch (_: Exception) {
@@ -588,16 +576,20 @@ class EbayService(
             }
         }
 
-        if (results.isEmpty() && allItems.isNotEmpty()) {
+        if (results.isEmpty()) {
             Logger.warn(
-                "SERP had {} raw rows for '{}' page {} but none passed filters (price/title/link/image/bid heuristics)",
-                allItems.size,
+                "SERP had {} raw rows for '{}' page {} but none passed filters (price/title/link/image/bid)",
+                rows.size,
                 keyword,
                 pageNumber,
             )
         }
         Logger.info("Found {} eligible items for keyword '{}' page {}", results.size, keyword, pageNumber)
         return results
+    }
+
+    private fun parseSerpRows(html: String): List<org.jsoup.nodes.Element> {
+        return collectSerpListingElements(Jsoup.parse(html))
     }
 
     private fun collectSerpListingElements(doc: org.jsoup.nodes.Document): List<org.jsoup.nodes.Element> {
@@ -661,29 +653,6 @@ class EbayService(
             normalizeMediaUrl(c)?.let { return it }
         }
         return null
-    }
-
-    private fun scrapeItemBidCount(browser: com.microsoft.playwright.Browser, itemUrl: String): Int {
-        return try {
-            val page = browser.newPage()
-            page.use {
-                it.setDefaultNavigationTimeout(60_000.0)
-                it.navigate(itemUrl, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
-                val html = it.content()
-                val doc = Jsoup.parse(html)
-
-                val bidText = doc.selectFirst(
-                    ".ux-labels-values--bids .ux-labels-values__values-content, " +
-                    "[data-testid='x-bid-count'], " +
-                    ".vi-bidBox-bid-cnt, " +
-                    "#w1-16 .ux-textspans"
-                )?.text() ?: ""
-                Regex("(\\d+)").find(bidText)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            }
-        } catch (e: Exception) {
-            Logger.warn("Failed to scrape bid count for {}: {}", itemUrl, e.message)
-            0
-        }
     }
 
     private fun parsePrice(text: String): Double? {
