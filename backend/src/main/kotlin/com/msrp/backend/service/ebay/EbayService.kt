@@ -617,25 +617,59 @@ class EbayService(
         }
     }
 
+    /** eBay CDN paths use `/s-lNNN` for width; SERP often uses 140–500px — we bump after picking the best candidate. */
+    private fun ebayImagePathPixelHint(url: String): Int =
+        Regex("""/s-l(\d+)""", RegexOption.IGNORE_CASE).find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+
+    /** Request gallery-sized image when the URL is on eBay's image CDN (same image id, larger file). */
+    private fun upgradeEbayImageUrl(url: String): String {
+        if (!url.contains("ebayimg", ignoreCase = true)) return url
+        return url.replace(Regex("""/s-l\d+""", RegexOption.IGNORE_CASE), "/s-l1600")
+    }
+
     private fun firstImageUrlFromImg(imgEl: org.jsoup.nodes.Element?): String? {
         if (imgEl == null) return null
-        val srcsetFirst = imgEl.attr("srcset")
-            .split(",")
-            .firstOrNull()
-            ?.trim()
-            ?.substringBefore(" ")
-            ?.trim()
-        val candidates = listOf(
-            imgEl.attr("src"),
-            imgEl.attr("data-src"),
-            imgEl.attr("data-zoom-src"),
-            imgEl.attr("data-original"),
-            srcsetFirst,
-        )
-        for (c in candidates) {
-            normalizeMediaUrl(c)?.let { return it }
+        var bestUrl: String? = null
+        var bestScore = -1
+
+        fun consider(raw: String?) {
+            val u = normalizeMediaUrl(raw) ?: return
+            val s = ebayImagePathPixelHint(u)
+            if (s > bestScore) {
+                bestScore = s
+                bestUrl = u
+            }
         }
-        return null
+
+        // High-res hints first, then lazy-load / fallback src.
+        consider(imgEl.attr("data-zoom-src"))
+        consider(imgEl.attr("data-original"))
+        consider(imgEl.attr("data-src"))
+        consider(imgEl.attr("src"))
+
+        val srcset = imgEl.attr("srcset").trim()
+        if (srcset.isNotEmpty()) {
+            for (segment in srcset.split(',')) {
+                val t = segment.trim()
+                if (t.isEmpty()) continue
+                val urlToken = t.substringBefore(' ').trim()
+                val rest = t.removePrefix(urlToken).trim()
+                val widthFromDescriptor = when {
+                    rest.endsWith("w", ignoreCase = true) ->
+                        rest.dropLast(1).trim().toIntOrNull() ?: 0
+                    else -> 0
+                }
+                val u = normalizeMediaUrl(urlToken) ?: continue
+                val s = maxOf(widthFromDescriptor, ebayImagePathPixelHint(u))
+                if (s > bestScore) {
+                    bestScore = s
+                    bestUrl = u
+                }
+            }
+        }
+
+        val picked = bestUrl ?: return null
+        return upgradeEbayImageUrl(picked)
     }
 
     private fun parsePrice(text: String): Double? {

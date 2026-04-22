@@ -1,4 +1,5 @@
 import { RoundResult } from '../types';
+import { ebayHighResImageUrl } from '../utils/ebayImage';
 import ProgressBar from './ProgressBar';
 
 interface RevealScreenProps {
@@ -36,9 +37,10 @@ export default function RevealScreen({ result, currentRound, totalRounds, onNext
       <div className="bg-msrp-card rounded-xl overflow-hidden border border-msrp-border">
         <div className="w-full aspect-video bg-black flex items-center justify-center overflow-hidden">
           <img
-            src={result.item.image_url}
+            src={ebayHighResImageUrl(result.item.image_url)}
             alt={result.item.title}
             className="w-full h-full object-contain"
+            decoding="async"
           />
         </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DailyItem } from '../types';
+import { ebayHighResImageUrl } from '../utils/ebayImage';
 import ProgressBar from './ProgressBar';
 
 interface GamePlayProps {
@@ -44,10 +45,11 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
       <div className="bg-msrp-card rounded-xl overflow-hidden border border-msrp-border">
         <div className="w-full aspect-square bg-black flex items-center justify-center overflow-hidden">
           <img
-            src={item.image_url}
+            src={ebayHighResImageUrl(item.image_url)}
             alt={item.title}
             className="w-full h-full object-contain"
             loading="eager"
+            decoding="async"
           />
         </div>
 
