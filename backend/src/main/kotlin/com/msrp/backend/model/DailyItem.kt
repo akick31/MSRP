@@ -25,7 +25,7 @@ class DailyItem {
     @JsonProperty("game_date")
     var gameDate: LocalDate = LocalDate.now()
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 4096)
     @JsonProperty("title")
     var title: String = ""
 

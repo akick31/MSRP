@@ -43,7 +43,7 @@ export default function RevealScreen({ result, currentRound, totalRounds, onNext
         </div>
 
         <div className="p-4">
-          <h2 className="text-msrp-text font-semibold text-base leading-tight mb-4">
+          <h2 className="text-msrp-text font-semibold text-base leading-snug mb-4 w-full break-words [overflow-wrap:anywhere]">
             {result.item.title}
           </h2>
 

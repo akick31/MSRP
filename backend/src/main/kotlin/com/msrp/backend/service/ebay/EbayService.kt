@@ -3,7 +3,7 @@ package com.msrp.backend.service.ebay
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
-import com.microsoft.playwright.options.LoadState
+import com.microsoft.playwright.options.WaitUntilState
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
 import com.msrp.backend.repositories.DailyItemRepository
@@ -336,8 +336,9 @@ class EbayService(
             return VerifyResponse(itemId = item.id, guess = guess, actualPrice = item.soldPrice, percentageOff = roundedPercentageOff, score = 100)
         }
         val ratio = if (guess > 0) maxOf(guess / item.soldPrice, item.soldPrice / guess) else Double.MAX_VALUE
-        val logPenalty = 10.0 * Math.log(ratio)
-        val scalePenalty = 10.0 * Math.abs(guess - item.soldPrice) / (10.0 + 0.1 * item.soldPrice)
+        // Penalties tuned so large multiplicative misses (e.g. $35 vs ~$5.60) score much lower than ~50.
+        val logPenalty = 16.0 * Math.log(ratio)
+        val scalePenalty = 13.0 * Math.abs(guess - item.soldPrice) / (10.0 + 0.15 * item.soldPrice)
         val rawScore = 100.0 - logPenalty - scalePenalty
         val score = when {
             rawScore >= 95 -> 100
@@ -434,7 +435,7 @@ class EbayService(
             val page = browser.newPage()
             page.use {
                 it.setDefaultNavigationTimeout(60_000.0)
-                it.navigate(url, Page.NavigateOptions().setWaitUntil(LoadState.LOAD).setTimeout(60_000.0))
+                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
                 val content = it.content()
                 content
             }
@@ -492,7 +493,7 @@ class EbayService(
             val page = browser.newPage()
             page.use {
                 it.setDefaultNavigationTimeout(60_000.0)
-                it.navigate(itemUrl, Page.NavigateOptions().setWaitUntil(LoadState.LOAD).setTimeout(60_000.0))
+                it.navigate(itemUrl, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
                 val html = it.content()
                 val doc = Jsoup.parse(html)
 

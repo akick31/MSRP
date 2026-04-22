@@ -52,7 +52,7 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
         </div>
 
         <div className="p-4">
-          <h2 className="text-msrp-text font-semibold text-base leading-tight mb-3">
+          <h2 className="text-msrp-text font-semibold text-base leading-snug mb-3 w-full break-words [overflow-wrap:anywhere]">
             {item.title}
           </h2>
 

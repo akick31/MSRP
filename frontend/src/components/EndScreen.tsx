@@ -59,16 +59,20 @@ export default function EndScreen({ results, stats }: EndScreenProps) {
 
       <div className="space-y-2 mb-6">
         {results.map((result, i) => (
-          <div key={i} className="flex items-center gap-3 bg-msrp-card rounded-lg p-3 border border-msrp-border">
-            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getScoreDot(result.score)}`} />
+          <div key={i} className="flex gap-3 bg-msrp-card rounded-lg p-3 border border-msrp-border">
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ${getScoreDot(result.score)}`} />
             <div className="flex-1 min-w-0">
-              <div className="text-msrp-text text-sm font-medium">{result.item.title}</div>
-              <div className="text-msrp-muted text-xs">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-msrp-text text-sm font-medium w-full min-w-0 break-words [overflow-wrap:anywhere]">
+                  {result.item.title}
+                </p>
+                <div className={`font-bold text-sm flex-shrink-0 tabular-nums ${getScoreColor(result.score)}`}>
+                  {result.score}
+                </div>
+              </div>
+              <div className="text-msrp-muted text-xs mt-1">
                 Guess: {formatPrice(result.guess)} | Sold: {formatPrice(result.actualPrice)}
               </div>
-            </div>
-            <div className={`font-bold text-sm flex-shrink-0 ${getScoreColor(result.score)}`}>
-              {result.score}
             </div>
           </div>
         ))}
