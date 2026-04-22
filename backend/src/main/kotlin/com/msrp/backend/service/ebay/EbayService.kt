@@ -26,7 +26,9 @@ class EbayService(
     companion object {
         private const val ITEMS_PER_DAY = 5
         private const val MIN_BID_COUNT = 5
-        private const val MAX_ITEM_PAGE_CHECKS = 5
+        /** Max item detail pages to open per keyword (after merging SERP pages). */
+        private const val MAX_ITEM_PAGE_CHECKS = 15
+        private const val MAX_SERP_PAGES = 3
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
 
         private val SEARCH_CATEGORIES = listOf(
@@ -382,14 +384,29 @@ class EbayService(
             ).use { browser ->
                 while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
                     val keyword = shuffledCategories.removeFirst()
-                    val pageNumber = (1..3).random()
-                    Logger.info("Scraping '{}' page {} ({}/{})", keyword, pageNumber, curatedItems.size + 1, ITEMS_PER_DAY)
-
-                    val candidates = scrapeCompletedAuctions(browser, keyword, pageNumber)
+                    val candidatesById = linkedMapOf<String, DailyItem>()
+                    val pageOrder = (1..MAX_SERP_PAGES).shuffled()
+                    for (pageNumber in pageOrder) {
+                        Logger.info(
+                            "Scraping '{}' page {}/{} ({}/{})",
+                            keyword,
+                            pageNumber,
+                            MAX_SERP_PAGES,
+                            curatedItems.size + 1,
+                            ITEMS_PER_DAY,
+                        )
+                        for (item in scrapeCompletedAuctions(browser, keyword, pageNumber)) {
+                            if (item.ebayItemId !in candidatesById) {
+                                candidatesById[item.ebayItemId] = item
+                            }
+                        }
+                    }
+                    val candidates = candidatesById.values.toList()
                     if (candidates.isEmpty()) {
-                        Logger.warn("No eligible items found for keyword '{}' page {}", keyword, pageNumber)
+                        Logger.warn("No eligible SERP rows for keyword '{}' (tried pages {})", keyword, pageOrder.joinToString())
                         continue
                     }
+                    Logger.info("{} unique SERP candidates for '{}' after {} pages", candidates.size, keyword, pageOrder.size)
 
                     var picked = false
                     var itemPageChecks = 0
@@ -446,6 +463,13 @@ class EbayService(
 
         val doc = Jsoup.parse(html)
         val allItems = doc.select("ul.srp-results li, li.s-card, li.s-item")
+        if (allItems.isEmpty()) {
+            Logger.warn(
+                "SERP returned no list rows for '{}' page {} (layout change, bot/captcha page, or empty results — not a date filter)",
+                keyword,
+                pageNumber,
+            )
+        }
 
         val results = mutableListOf<DailyItem>()
 
@@ -484,7 +508,15 @@ class EbayService(
             }
         }
 
-        Logger.info("Found {} eligible items for keyword '{}'", results.size, keyword)
+        if (results.isEmpty() && allItems.isNotEmpty()) {
+            Logger.warn(
+                "SERP had {} raw rows for '{}' page {} but none passed filters (price/title/link/image/bid heuristics)",
+                allItems.size,
+                keyword,
+                pageNumber,
+            )
+        }
+        Logger.info("Found {} eligible items for keyword '{}' page {}", results.size, keyword, pageNumber)
         return results
     }
 
