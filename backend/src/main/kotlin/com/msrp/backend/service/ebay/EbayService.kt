@@ -1,7 +1,9 @@
 package com.msrp.backend.service.ebay
 
 import com.microsoft.playwright.BrowserType
+import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
+import com.microsoft.playwright.options.LoadState
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
 import com.msrp.backend.repositories.DailyItemRepository
@@ -375,8 +377,6 @@ class EbayService(
                         "--disable-background-networking",
                         "--disable-sync",
                         "--no-first-run",
-                        "--js-flags=--max-old-space-size=256",
-                        "--renderer-process-limit=1",
                     ))
             ).use { browser ->
                 while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
@@ -433,8 +433,8 @@ class EbayService(
         val html = try {
             val page = browser.newPage()
             page.use {
-                it.navigate(url)
-                it.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
+                it.setDefaultNavigationTimeout(60_000.0)
+                it.navigate(url, Page.NavigateOptions().setWaitUntil(LoadState.LOAD).setTimeout(60_000.0))
                 val content = it.content()
                 content
             }
@@ -491,8 +491,8 @@ class EbayService(
         return try {
             val page = browser.newPage()
             page.use {
-                it.navigate(itemUrl)
-                it.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE)
+                it.setDefaultNavigationTimeout(60_000.0)
+                it.navigate(itemUrl, Page.NavigateOptions().setWaitUntil(LoadState.LOAD).setTimeout(60_000.0))
                 val html = it.content()
                 val doc = Jsoup.parse(html)
 
