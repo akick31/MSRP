@@ -407,59 +407,42 @@ class EbayService(
 
         while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
             val keyword = shuffledCategories.removeFirst()
-            val candidatesById = linkedMapOf<String, DailyItem>()
-            val pageOrder = (1..MAX_SERP_PAGES).shuffled()
-            for (pageNumber in pageOrder) {
-                Logger.info(
-                    "Scraping '{}' page {}/{} ({}/{})",
-                    keyword,
-                    pageNumber,
-                    MAX_SERP_PAGES,
-                    curatedItems.size + 1,
-                    ITEMS_PER_DAY,
-                )
-                for (item in scrapeCompletedAuctions(keyword, pageNumber)) {
-                    if (item.ebayItemId !in candidatesById) {
-                        candidatesById[item.ebayItemId] = item
-                    }
+            val pageNumber = (1..MAX_SERP_PAGES).random()
+            Logger.info(
+                "Scraping '{}' page {}/{} ({}/{})",
+                keyword,
+                pageNumber,
+                MAX_SERP_PAGES,
+                curatedItems.size + 1,
+                ITEMS_PER_DAY,
+            )
+            val pageItems = scrapeCompletedAuctions(keyword, pageNumber)
+            val usable = pageItems.filter { it.ebayItemId !in usedIds }
+            if (usable.isEmpty()) {
+                if (pageItems.isNotEmpty()) {
+                    Logger.warn(
+                        "Keyword '{}' page {} had {} eligible items but all were already used",
+                        keyword,
+                        pageNumber,
+                        pageItems.size,
+                    )
+                } else {
+                    Logger.warn("No eligible SERP rows for keyword '{}' on page {}", keyword, pageNumber)
                 }
-            }
-            val candidates = candidatesById.values.toList()
-            if (candidates.isEmpty()) {
-                Logger.warn(
-                    "No eligible SERP rows for keyword '{}' (tried pages {})",
-                    keyword,
-                    pageOrder.joinToString(),
-                )
                 continue
             }
-            Logger.info(
-                "{} unique SERP candidates for '{}' after {} pages",
-                candidates.size,
-                keyword,
-                pageOrder.size,
-            )
+            Logger.info("{} eligible items on page {} for '{}' — picking one at random", usable.size, pageNumber, keyword)
 
-            var picked = false
-            for (candidate in candidates.shuffled()) {
-                if (candidate.ebayItemId in usedIds) continue
-                // SERP already exposes the final bid count on auction cards; no per-item fetch needed.
-                if (candidate.bidCount < MIN_BID_COUNT) continue
-                candidate.gameDate = targetDate
-                curatedItems.add(candidate)
-                usedIds.add(candidate.ebayItemId)
-                Logger.info(
-                    "Selected item: {} at {} ({} bids)",
-                    candidate.title,
-                    candidate.soldPrice,
-                    candidate.bidCount,
-                )
-                picked = true
-                break
-            }
-            if (!picked) {
-                Logger.warn("No item with >= {} bids found for '{}'", MIN_BID_COUNT, keyword)
-            }
+            val candidate = usable.random()
+            candidate.gameDate = targetDate
+            curatedItems.add(candidate)
+            usedIds.add(candidate.ebayItemId)
+            Logger.info(
+                "Selected item: {} at {} ({} bids)",
+                candidate.title,
+                candidate.soldPrice,
+                candidate.bidCount,
+            )
         }
 
         val newItems = curatedItems.filter { it.id == 0L }
