@@ -18,7 +18,6 @@ import java.time.Duration
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 @Service
 class EbayService(
@@ -379,11 +378,8 @@ class EbayService(
         val logPenalty = 16.0 * Math.log(ratio)
         val scalePenalty = 13.0 * Math.abs(guess - item.soldPrice) / (10.0 + 0.15 * item.soldPrice)
         val rawScore = 100.0 - logPenalty - scalePenalty
-        val score = when {
-            rawScore >= 95 -> 100
-            rawScore < 0   -> 0
-            else           -> rawScore.toInt()
-        }
+        // No "95+ rounds to 100" bump — close misses (e.g. $155 vs $165) should stay in the mid‑90s, not perfect.
+        val score = rawScore.toInt().coerceIn(0, 100)
 
         return VerifyResponse(
             itemId = item.id,
