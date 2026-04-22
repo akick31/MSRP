@@ -3,6 +3,7 @@ package com.msrp.backend.service.ebay
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Page
 import com.microsoft.playwright.Playwright
+import com.microsoft.playwright.options.WaitForSelectorState
 import com.microsoft.playwright.options.WaitUntilState
 import com.msrp.backend.dto.VerifyResponse
 import com.msrp.backend.model.DailyItem
@@ -30,6 +31,20 @@ class EbayService(
         private const val MAX_ITEM_PAGE_CHECKS = 15
         private const val MAX_SERP_PAGES = 3
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
+
+        /** SERP cards are mostly client-rendered; these cover list + magazine layouts. */
+        private val SERP_CARD_SELECTORS = listOf(
+            "ul.srp-results > li.s-card",
+            "ul.srp-results > li.s-item",
+            "ul.srp-results li.s-card",
+            "ul.srp-results li.s-item",
+            "li.s-card",
+            "li.s-item",
+            "li[data-listingid]",
+        )
+
+        private val SERP_WAIT_SELECTOR =
+            "ul.srp-results li, li.s-card, li.s-item, li[data-listingid]"
 
         private val SEARCH_CATEGORIES = listOf(
             "baseball",
@@ -446,15 +461,36 @@ class EbayService(
 
     private fun scrapeCompletedAuctions(browser: com.microsoft.playwright.Browser, keyword: String, pageNumber: Int): List<DailyItem> {
         val encoded = URLEncoder.encode(keyword, "UTF-8")
-        val url = "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60"
+        val url =
+            "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60&rt=nc"
 
         val html = try {
             val page = browser.newPage()
             page.use {
                 it.setDefaultNavigationTimeout(60_000.0)
-                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD).setTimeout(60_000.0))
-                val content = it.content()
-                content
+                it.setExtraHTTPHeaders(
+                    mapOf(
+                        "Accept-Language" to "en-US,en;q=0.9",
+                    ),
+                )
+                it.navigate(url, Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED).setTimeout(60_000.0))
+                try {
+                    it.waitForSelector(
+                        SERP_WAIT_SELECTOR,
+                        Page.WaitForSelectorOptions()
+                            .setTimeout(45_000.0)
+                            .setState(WaitForSelectorState.ATTACHED),
+                    )
+                } catch (e: Exception) {
+                    Logger.warn(
+                        "Timed out waiting for SERP listing markup for '{}' page {}: {}",
+                        keyword,
+                        pageNumber,
+                        e.message,
+                    )
+                }
+                it.waitForTimeout(1_500.0)
+                it.content()
             }
         } catch (e: Exception) {
             Logger.error("Playwright failed for keyword '{}': {}", keyword, e.message)
@@ -462,7 +498,7 @@ class EbayService(
         }
 
         val doc = Jsoup.parse(html)
-        val allItems = doc.select("ul.srp-results li, li.s-card, li.s-item")
+        val allItems = collectSerpListingElements(doc)
         if (allItems.isEmpty()) {
             Logger.warn(
                 "SERP returned no list rows for '{}' page {} (layout change, bot/captcha page, or empty results — not a date filter)",
@@ -472,29 +508,29 @@ class EbayService(
         }
 
         val results = mutableListOf<DailyItem>()
+        val seenItemIds = mutableSetOf<String>()
 
         for (el in allItems) {
             try {
-                val title = (el.selectFirst(".s-card__title, .s-item__title")?.text() ?: "")
-                    .replace("Opens in a new window or tab", "")
-                    .trim()
+                val title = extractSerpTitle(el)
                 if (title.isBlank() || title == "Shop on eBay") continue
 
-                val itemUrl = el.selectFirst("a.s-card__link, a.s-item__link")?.attr("href") ?: continue
-                val itemId = Regex("/itm/(\\d+)").find(itemUrl)?.groupValues?.get(1) ?: continue
+                val href = extractSerpItemHref(el) ?: continue
+                val itemId = Regex("/itm/(\\d+)").find(href)?.groupValues?.get(1) ?: continue
+                if (itemId in seenItemIds) continue
 
-                val priceText = el.selectFirst(".s-card__price, .s-item__price")?.text() ?: continue
+                val priceText = el.selectFirst(
+                    ".s-card__price, .s-item__price, span[class*='s-card__price'], span[class*='s-item__price']",
+                )?.text() ?: continue
                 val soldPrice = parsePrice(priceText) ?: continue
                 if (soldPrice <= 0.0) continue
 
-                val imgEl = el.selectFirst("img")
-                val imageUrl = imgEl?.attr("src")?.takeIf { it.startsWith("http") }
-                    ?: imgEl?.attr("data-src")?.takeIf { it.startsWith("http") }
-                    ?: continue
+                val imageUrl = firstImageUrlFromImg(el.selectFirst("img")) ?: continue
 
                 val cardBidCount = BID_COUNT_REGEX.find(el.text())?.groupValues?.get(1)?.toIntOrNull()
                 if (cardBidCount != null && cardBidCount < MIN_BID_COUNT) continue
 
+                seenItemIds.add(itemId)
                 val entity = DailyItem()
                 entity.ebayItemId = itemId
                 entity.title = title
@@ -503,7 +539,7 @@ class EbayService(
                 entity.bidCount = cardBidCount ?: 0
                 entity.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
                 results.add(entity)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 continue
             }
         }
@@ -518,6 +554,69 @@ class EbayService(
         }
         Logger.info("Found {} eligible items for keyword '{}' page {}", results.size, keyword, pageNumber)
         return results
+    }
+
+    private fun collectSerpListingElements(doc: org.jsoup.nodes.Document): List<org.jsoup.nodes.Element> {
+        val seen = java.util.IdentityHashMap<org.jsoup.nodes.Element, Boolean>()
+        val out = mutableListOf<org.jsoup.nodes.Element>()
+        for (sel in SERP_CARD_SELECTORS) {
+            for (el in doc.select(sel)) {
+                if (el.selectFirst("a[href*='/itm/']") == null) continue
+                if (seen.put(el, true) != null) continue
+                out.add(el)
+            }
+        }
+        return out
+    }
+
+    private fun extractSerpTitle(el: org.jsoup.nodes.Element): String {
+        val raw = el.selectFirst(
+            ".s-card__title, .s-item__title, [class*='s-card__title'], [class*='s-item__title'], div[role=heading].s-card__title, h3.s-card__title",
+        )?.text()
+            ?: el.selectFirst("a[href*='/itm/']")?.attr("aria-label")?.trim()
+            ?: ""
+        return raw.replace("Opens in a new window or tab", "", ignoreCase = true).trim()
+    }
+
+    private fun extractSerpItemHref(el: org.jsoup.nodes.Element): String? {
+        val a = el.selectFirst("a.s-card__link, a.s-item__link, a[href*='/itm/']") ?: return null
+        var href = a.attr("href").trim()
+        if (href.isEmpty()) return null
+        if (href.startsWith("/itm/")) href = "https://www.ebay.com$href"
+        if (!href.contains("/itm/")) return null
+        return href
+    }
+
+    private fun normalizeMediaUrl(raw: String?): String? {
+        if (raw.isNullOrBlank()) return null
+        val t = raw.trim()
+        return when {
+            t.startsWith("http://", ignoreCase = true) || t.startsWith("https://", ignoreCase = true) -> t
+            t.startsWith("//") -> "https:$t"
+            t.startsWith("/images/") -> "https://i.ebayimg.com$t"
+            else -> null
+        }
+    }
+
+    private fun firstImageUrlFromImg(imgEl: org.jsoup.nodes.Element?): String? {
+        if (imgEl == null) return null
+        val srcsetFirst = imgEl.attr("srcset")
+            .split(",")
+            .firstOrNull()
+            ?.trim()
+            ?.substringBefore(" ")
+            ?.trim()
+        val candidates = listOf(
+            imgEl.attr("src"),
+            imgEl.attr("data-src"),
+            imgEl.attr("data-zoom-src"),
+            imgEl.attr("data-original"),
+            srcsetFirst,
+        )
+        for (c in candidates) {
+            normalizeMediaUrl(c)?.let { return it }
+        }
+        return null
     }
 
     private fun scrapeItemBidCount(browser: com.microsoft.playwright.Browser, itemUrl: String): Int {
