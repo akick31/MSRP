@@ -44,4 +44,8 @@ class DailyItem {
     @Column(nullable = false, length = 1024)
     @JsonProperty("item_url")
     var itemUrl: String = ""
+
+    @Column(nullable = true)
+    @JsonProperty("sale_date")
+    var saleDate: LocalDate? = null
 }

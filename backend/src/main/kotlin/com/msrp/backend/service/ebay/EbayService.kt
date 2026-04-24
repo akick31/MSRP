@@ -16,6 +16,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -58,6 +61,13 @@ class EbayService(
             // Mobile site
             "li.brwrvr__item-card",
             "div.brwrvr__item-card",
+        )
+
+        private val SALE_DATE_FORMATS = listOf(
+            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
         )
 
         private val SEARCH_CATEGORIES = listOf(
@@ -549,6 +559,7 @@ class EbayService(
                 entity.soldPrice = soldPrice
                 entity.bidCount = cardBidCount
                 entity.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
+                entity.saleDate = extractSerpSaleDate(el)
                 results.add(entity)
             } catch (_: Exception) {
                 continue
@@ -591,6 +602,21 @@ class EbayService(
             ?: el.selectFirst("a[href*='/itm/']")?.attr("aria-label")?.trim()
             ?: ""
         return raw.replace("Opens in a new window or tab", "", ignoreCase = true).trim()
+    }
+
+    private fun extractSerpSaleDate(el: org.jsoup.nodes.Element): LocalDate? {
+        val raw = el.selectFirst(
+            ".s-item__ended-date, .s-item__caption--signal.POSITIVE, span.POSITIVE, .s-item__caption--signal",
+        )?.text() ?: return null
+        val cleaned = raw.replace("Sold", "", ignoreCase = true).trim()
+        for (fmt in SALE_DATE_FORMATS) {
+            try {
+                return LocalDate.parse(cleaned, fmt)
+            } catch (_: DateTimeParseException) {
+                continue
+            }
+        }
+        return null
     }
 
     private fun extractSerpItemHref(el: org.jsoup.nodes.Element): String? {

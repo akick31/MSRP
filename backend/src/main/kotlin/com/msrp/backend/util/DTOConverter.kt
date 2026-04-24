@@ -18,6 +18,7 @@ class DTOConverter {
             bidCount = item.bidCount,
             itemUrl = item.itemUrl,
             priceChoices = generatePriceChoices(item.soldPrice),
+            saleDate = item.saleDate?.toString(),
         )
     }
 

@@ -7,6 +7,7 @@ export interface DailyItem {
   bid_count: number;
   item_url: string;
   price_choices: number[];
+  sale_date?: string;
 }
 
 export interface VerifyRequest {

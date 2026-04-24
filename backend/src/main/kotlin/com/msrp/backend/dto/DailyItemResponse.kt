@@ -9,4 +9,5 @@ data class DailyItemResponse(
     val bidCount: Int,
     val itemUrl: String,
     val priceChoices: List<Double>,
+    val saleDate: String?,
 )

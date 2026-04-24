@@ -58,8 +58,15 @@ export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: 
             {item.title}
           </h2>
 
-          <div className="inline-block bg-msrp-border text-msrp-muted text-xs font-medium px-2.5 py-1 rounded-md mb-4">
-            {item.bid_count} bids
+          <div className="flex items-center gap-2 mb-4">
+            <div className="inline-block bg-msrp-border text-msrp-muted text-xs font-medium px-2.5 py-1 rounded-md">
+              {item.bid_count} bids
+            </div>
+            {item.sale_date && (
+              <div className="inline-block bg-msrp-border text-msrp-muted text-xs font-medium px-2.5 py-1 rounded-md">
+                Sold {new Date(item.sale_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">

@@ -49,6 +49,12 @@ export default function RevealScreen({ result, currentRound, totalRounds, onNext
             {result.item.title}
           </h2>
 
+          {result.item.sale_date && (
+            <div className="text-msrp-muted text-xs mb-3">
+              Sold {new Date(result.item.sale_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-msrp-bg rounded-lg p-3 border border-msrp-border">
               <div className="text-msrp-muted text-xs mb-1">Your Guess</div>
