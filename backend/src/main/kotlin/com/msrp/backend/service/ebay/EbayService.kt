@@ -30,18 +30,14 @@ class EbayService(
     companion object {
         private const val ITEMS_PER_DAY = 5
         private const val MIN_BID_COUNT = 5
-        private const val MAX_SERP_PAGES = 3
+        private const val MAX_CONSECUTIVE_FAILURES = 3
         private val BID_COUNT_REGEX = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
+        private val REQUEST_DELAY_MS = 1500L..3000L
 
         /** Real desktop Chrome on macOS — eBay serves SSR listings to it. */
         private const val DESKTOP_UA =
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-
-        /** iPhone Safari — m.ebay.com responds with very lightweight, server-rendered cards. */
-        private const val MOBILE_UA =
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 " +
-                "(KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
 
         private val HTTP_REQUEST_TIMEOUT: Duration = Duration.ofSeconds(20)
         private val HTTP_CONNECT_TIMEOUT: Duration = Duration.ofSeconds(10)
@@ -410,45 +406,36 @@ class EbayService(
         val usedIds = existing.map { it.ebayItemId }.toMutableSet()
         val curatedItems = existing.toMutableList()
         val shuffledCategories = SEARCH_CATEGORIES.shuffled().toMutableList()
+        var consecutiveFailures = 0
 
         while (curatedItems.size < ITEMS_PER_DAY && shuffledCategories.isNotEmpty()) {
+            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                Logger.warn("Stopping curation after {} consecutive failures — eBay may be rate-limiting", consecutiveFailures)
+                break
+            }
+
             val keyword = shuffledCategories.removeFirst()
-            val pageNumber = (1..MAX_SERP_PAGES).random()
-            Logger.info(
-                "Scraping '{}' page {}/{} ({}/{})",
-                keyword,
-                pageNumber,
-                MAX_SERP_PAGES,
-                curatedItems.size + 1,
-                ITEMS_PER_DAY,
-            )
-            val pageItems = scrapeCompletedAuctions(keyword, pageNumber)
+            Logger.info("Scraping '{}' ({}/{})", keyword, curatedItems.size + 1, ITEMS_PER_DAY)
+
+            val pageItems = scrapeCompletedAuctions(keyword)
             val usable = pageItems.filter { it.ebayItemId !in usedIds }
+
             if (usable.isEmpty()) {
+                consecutiveFailures++
                 if (pageItems.isNotEmpty()) {
-                    Logger.warn(
-                        "Keyword '{}' page {} had {} eligible items but all were already used",
-                        keyword,
-                        pageNumber,
-                        pageItems.size,
-                    )
+                    Logger.warn("Keyword '{}' returned items but all already used", keyword)
                 } else {
-                    Logger.warn("No eligible SERP rows for keyword '{}' on page {}", keyword, pageNumber)
+                    Logger.warn("No eligible items for keyword '{}'", keyword)
                 }
                 continue
             }
-            Logger.info("{} eligible items on page {} for '{}' — picking one at random", usable.size, pageNumber, keyword)
 
-            val candidate = usable.random()
-            candidate.gameDate = targetDate
-            curatedItems.add(candidate)
-            usedIds.add(candidate.ebayItemId)
-            Logger.info(
-                "Selected item: {} at {} ({} bids)",
-                candidate.title,
-                candidate.soldPrice,
-                candidate.bidCount,
-            )
+            consecutiveFailures = 0
+            val pick = usable.random()
+            pick.gameDate = targetDate
+            curatedItems.add(pick)
+            usedIds.add(pick.ebayItemId)
+            Logger.info("Selected from '{}': {} — \${} ({} bids)", keyword, pick.title, pick.soldPrice, pick.bidCount)
         }
 
         val newItems = curatedItems.filter { it.id == 0L }
@@ -467,13 +454,18 @@ class EbayService(
             .timeout(HTTP_REQUEST_TIMEOUT)
             .GET()
             .header("User-Agent", userAgent)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
             .header("Accept-Language", "en-US,en;q=0.9")
-            .header("Accept-Encoding", "gzip, deflate")
+            .header("Accept-Encoding", "gzip, deflate, br")
             .header("Upgrade-Insecure-Requests", "1")
-            .header("Cache-Control", "no-cache")
-            .header("Pragma", "no-cache")
-            .header("DNT", "1")
+            .header("Cache-Control", "max-age=0")
+            .header("Sec-Fetch-Dest", "document")
+            .header("Sec-Fetch-Mode", "navigate")
+            .header("Sec-Fetch-Site", if (referer != null) "same-origin" else "none")
+            .header("Sec-Fetch-User", "?1")
+            .header("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"")
+            .header("sec-ch-ua-mobile", "?0")
+            .header("sec-ch-ua-platform", "\"macOS\"")
         if (referer != null) builder.header("Referer", referer)
 
         return try {
@@ -496,34 +488,17 @@ class EbayService(
         }
     }
 
-    private fun scrapeCompletedAuctions(keyword: String, pageNumber: Int): List<DailyItem> {
+    private fun scrapeCompletedAuctions(keyword: String): List<DailyItem> {
+        Thread.sleep(REQUEST_DELAY_MS.random())
+
         val encoded = URLEncoder.encode(keyword, "UTF-8")
+        val url = "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=1&_ipg=60&rt=nc"
 
-        // Try desktop first — it's the richest markup. Fall back to mobile if eBay returns a shell/bot page.
-        val desktopUrl =
-            "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60&rt=nc"
-        val mobileUrl =
-            "https://www.ebay.com/sch/i.html?_nkw=$encoded&LH_Complete=1&LH_Sold=1&LH_Auction=1&_pgn=$pageNumber&_ipg=60&_sop=13"
-
-        var html = fetchHtml(desktopUrl, DESKTOP_UA, referer = "https://www.ebay.com/")
-        var rows = html?.let { parseSerpRows(it) }.orEmpty()
+        val html = fetchHtml(url, DESKTOP_UA, referer = "https://www.ebay.com/")
+        val rows = html?.let { parseSerpRows(it) }.orEmpty()
 
         if (rows.isEmpty()) {
-            Logger.info(
-                "Desktop SERP empty for '{}' page {} — retrying as mobile",
-                keyword,
-                pageNumber,
-            )
-            html = fetchHtml(mobileUrl, MOBILE_UA, referer = "https://m.ebay.com/")
-            rows = html?.let { parseSerpRows(it) }.orEmpty()
-        }
-
-        if (rows.isEmpty()) {
-            Logger.warn(
-                "SERP returned no list rows for '{}' page {} (layout change, bot/captcha, or empty results)",
-                keyword,
-                pageNumber,
-            )
+            Logger.warn("SERP returned no list rows for '{}' (blocked or layout change)", keyword)
             return emptyList()
         }
 
@@ -567,14 +542,10 @@ class EbayService(
         }
 
         if (results.isEmpty()) {
-            Logger.warn(
-                "SERP had {} raw rows for '{}' page {} but none passed filters (price/title/link/image/bid)",
-                rows.size,
-                keyword,
-                pageNumber,
-            )
+            Logger.warn("SERP had {} raw rows for '{}' but none passed filters", rows.size, keyword)
+        } else {
+            Logger.info("Found {} eligible items for keyword '{}'", results.size, keyword)
         }
-        Logger.info("Found {} eligible items for keyword '{}' page {}", results.size, keyword, pageNumber)
         return results
     }
 
