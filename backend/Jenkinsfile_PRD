@@ -75,7 +75,16 @@ pipeline {
 
                     echo 'Building the MSRP Backend project...'
                     sh 'chmod +x gradlew || true'
-                    sh './gradlew clean build -x test'
+                    sh '''
+                        JAVA17=$(update-alternatives --list java 2>/dev/null | grep java-17 | head -1 | sed 's|/bin/java||')
+                        if [ -z "$JAVA17" ]; then
+                            JAVA17=$(find /usr /opt /usr/lib/jvm -name "java" -path "*/java-17*/bin/java" 2>/dev/null | head -1 | sed 's|/bin/java||')
+                        fi
+                        export JAVA_HOME="$JAVA17"
+                        export PATH="$JAVA_HOME/bin:$PATH"
+                        echo "Using JAVA_HOME=$JAVA_HOME"
+                        ./gradlew clean build -x test --no-daemon
+                    '''
                 }
             }
         }

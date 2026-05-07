@@ -20,6 +20,7 @@ import GlobalStatsModal from '../components/GlobalStatsModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
 const VISITOR_DATE_KEY = 'msrp-visitor-date';
+const SCORE_SUBMITTED_DATE_KEY = 'msrp-score-submitted-date';
 
 function getTodayEST(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
@@ -32,7 +33,6 @@ export default function DailyPage() {
   const { settings, updateSettings } = useSettings();
 
   const hasRecorded = useRef(false);
-  const scoreSubmitted = useRef(false);
 
   const [htpOpen, setHtpOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
@@ -57,10 +57,10 @@ export default function DailyPage() {
         const totalScore = results.reduce((sum, r) => sum + r.score, 0);
         recordGame(totalScore);
         recordAnalytics('GAMES_PLAYED');
-        if (!scoreSubmitted.current) {
-          scoreSubmitted.current = true;
-          const gameDate = items[0]?.game_date ?? '';
-          if (gameDate) submitScore(totalScore, gameDate);
+        const gameDate = items[0]?.game_date ?? '';
+        if (gameDate && localStorage.getItem(SCORE_SUBMITTED_DATE_KEY) !== gameDate) {
+          localStorage.setItem(SCORE_SUBMITTED_DATE_KEY, gameDate);
+          submitScore(totalScore, gameDate);
         }
       }
     }

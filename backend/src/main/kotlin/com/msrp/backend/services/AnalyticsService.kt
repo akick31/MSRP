@@ -85,9 +85,10 @@ class AnalyticsService(
     }
 
     fun getGameStats(dateStr: String): ResponseEntity<Any> {
-        val gameDate = runCatching { LocalDate.parse(dateStr) }.getOrElse {
-            return ResponseEntity.badRequest().body(mapOf("error" to "invalid date format"))
-        }
+        val gameDate =
+            runCatching { LocalDate.parse(dateStr) }.getOrElse {
+                return ResponseEntity.badRequest().body(mapOf("error" to "invalid date format"))
+            }
         val stats = gameStatsRepository.findByGameDate(gameDate)
         val avg = if (stats != null && stats.scoreCount > 0) stats.totalScore.toDouble() / stats.scoreCount else null
         return ResponseEntity.ok(
