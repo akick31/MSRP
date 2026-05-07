@@ -18,7 +18,11 @@ import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
-const VISITOR_RECORDED_KEY = 'msrp-visitor-recorded';
+const VISITOR_DATE_KEY = 'msrp-visitor-date';
+
+function getTodayEST(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
 
 export default function DailyPage() {
   const navigate = useNavigate();
@@ -36,9 +40,10 @@ export default function DailyPage() {
   const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
-    const alreadyRecorded = sessionStorage.getItem(VISITOR_RECORDED_KEY);
-    if (!alreadyRecorded) {
-      sessionStorage.setItem(VISITOR_RECORDED_KEY, '1');
+    const today = getTodayEST();
+    const lastRecorded = localStorage.getItem(VISITOR_DATE_KEY);
+    if (lastRecorded !== today) {
+      localStorage.setItem(VISITOR_DATE_KEY, today);
       recordAnalytics('UNIQUE_VISITORS');
     }
   }, []);
