@@ -16,6 +16,7 @@ import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
 import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
+import GlobalStatsModal from '../components/GlobalStatsModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
 const VISITOR_DATE_KEY = 'msrp-visitor-date';
@@ -35,6 +36,7 @@ export default function DailyPage() {
 
   const [htpOpen, setHtpOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [globalStatsOpen, setGlobalStatsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pastPickerOpen, setPastPickerOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -90,6 +92,7 @@ export default function DailyPage() {
           onHowToPlay={() => setHtpOpen(true)}
           onPastGame={() => setPastPickerOpen(true)}
           onStats={() => setStatsOpen(true)}
+          onGlobalStats={() => setGlobalStatsOpen(true)}
           onSettings={() => setSettingsOpen(true)}
         />
       )}
@@ -118,6 +121,7 @@ export default function DailyPage() {
           <EndScreen
             results={results}
             stats={stats}
+            gameDate={items[0]?.game_date ?? ''}
             onPlayPastGame={() => setPastPickerOpen(true)}
           />
         )}
@@ -153,6 +157,7 @@ export default function DailyPage() {
 
       <HowToPlay open={htpOpen} onClose={() => setHtpOpen(false)} onContact={() => setContactOpen(true)} />
       <StatsModal open={statsOpen} onClose={() => setStatsOpen(false)} stats={stats} lastResults={lastResults} />
+      <GlobalStatsModal open={globalStatsOpen} onClose={() => setGlobalStatsOpen(false)} gameDate={items[0]?.game_date ?? ''} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onUpdate={updateSettings} />
       <PastGamePickerModal open={pastPickerOpen} onClose={() => setPastPickerOpen(false)} onSelect={handleSelectPastGame} />
       <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />

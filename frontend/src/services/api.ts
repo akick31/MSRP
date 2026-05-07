@@ -1,4 +1,4 @@
-import { DailyItem, VerifyRequest, VerifyResponse } from '../types';
+import { DailyItem, GlobalStats, VerifyRequest, VerifyResponse } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1/msrp';
 
@@ -58,6 +58,10 @@ export async function submitScore(score: number, date: string): Promise<void> {
   } catch (e) {
     console.error('[analytics] failed to submit score', e);
   }
+}
+
+export async function fetchGlobalStats(date: string): Promise<GlobalStats> {
+  return request<GlobalStats>(`/game-stats?date=${date}`);
 }
 
 export async function submitContact(payload: {

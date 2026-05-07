@@ -78,8 +78,27 @@ class AnalyticsService(
         val stats = gameStatsRepository.findByGameDate(gameDate) ?: GameStats(gameDate = gameDate)
         if (stats.highScore == null || score > stats.highScore!!) stats.highScore = score
         if (stats.lowScore == null || score < stats.lowScore!!) stats.lowScore = score
+        stats.totalScore += score
+        stats.scoreCount += 1
         gameStatsRepository.save(stats)
         return ResponseEntity.ok(mapOf("ok" to true))
+    }
+
+    fun getGameStats(dateStr: String): ResponseEntity<Any> {
+        val gameDate = runCatching { LocalDate.parse(dateStr) }.getOrElse {
+            return ResponseEntity.badRequest().body(mapOf("error" to "invalid date format"))
+        }
+        val stats = gameStatsRepository.findByGameDate(gameDate)
+        val avg = if (stats != null && stats.scoreCount > 0) stats.totalScore.toDouble() / stats.scoreCount else null
+        return ResponseEntity.ok(
+            mapOf(
+                "date" to gameDate.toString(),
+                "highScore" to stats?.highScore,
+                "lowScore" to stats?.lowScore,
+                "avgScore" to avg?.let { Math.round(it).toInt() },
+                "playerCount" to (stats?.scoreCount ?: 0),
+            ),
+        )
     }
 
     fun getSummary(days: Int): ResponseEntity<Any> {

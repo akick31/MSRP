@@ -31,6 +31,14 @@ export interface RoundResult {
   score: number;
 }
 
+export interface GlobalStats {
+  date: string;
+  highScore: number | null;
+  lowScore: number | null;
+  avgScore: number | null;
+  playerCount: number;
+}
+
 export interface PlayerStats {
   currentStreak: number;
   maxStreak: number;

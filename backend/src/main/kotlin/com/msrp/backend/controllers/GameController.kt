@@ -50,6 +50,11 @@ class GameController(
         @RequestBody request: ContactRequest,
     ): ResponseEntity<Any> = contactService.send(request)
 
+    @GetMapping("/game-stats")
+    fun getGameStats(
+        @RequestParam date: String,
+    ): ResponseEntity<Any> = analyticsService.getGameStats(date)
+
     @PostMapping("/admin/curate")
     fun triggerCuration(
         @RequestParam(required = false) date: String?,

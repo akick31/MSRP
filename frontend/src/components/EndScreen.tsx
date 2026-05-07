@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { RoundResult, PlayerStats } from '../types';
+import { useState, useEffect } from 'react';
+import { RoundResult, PlayerStats, GlobalStats } from '../types';
 import { buildShareText, copyToClipboard } from '../utils/share';
+import { fetchGlobalStats } from '../services/api';
 
 interface EndScreenProps {
   results: RoundResult[];
   stats: PlayerStats;
+  gameDate: string;
   isPastGame?: boolean;
   onPlayPastGame?: () => void;
 }
@@ -27,10 +29,16 @@ function getScoreDot(score: number): string {
   return 'bg-msrp-red';
 }
 
-export default function EndScreen({ results, stats, isPastGame = false, onPlayPastGame }: EndScreenProps) {
+export default function EndScreen({ results, stats, gameDate, isPastGame = false, onPlayPastGame }: EndScreenProps) {
   const [copied, setCopied] = useState(false);
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
 
   const totalScore = results.reduce((sum, r) => sum + r.score, 0);
+
+  useEffect(() => {
+    if (!gameDate) return;
+    fetchGlobalStats(gameDate).then(setGlobalStats).catch(() => {});
+  }, [gameDate]);
 
   async function handleShare() {
     const text = buildShareText(results, stats.currentStreak);
@@ -61,6 +69,28 @@ export default function EndScreen({ results, stats, isPastGame = false, onPlayPa
         </div>
       )}
 
+      {globalStats && globalStats.playerCount > 0 && (
+        <div className="bg-msrp-card border border-msrp-border rounded-lg p-4 mb-6">
+          <p className="text-msrp-muted text-xs text-center mb-3">
+            Global Stats · {globalStats.playerCount} {globalStats.playerCount === 1 ? 'player' : 'players'} today
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <div className="text-xl font-bold text-msrp-green">{globalStats.highScore ?? '—'}</div>
+              <div className="text-msrp-muted text-xs mt-1">High</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-msrp-text">{globalStats.avgScore ?? '—'}</div>
+              <div className="text-msrp-muted text-xs mt-1">Average</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-msrp-red">{globalStats.lowScore ?? '—'}</div>
+              <div className="text-msrp-muted text-xs mt-1">Low</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2 mb-6">
         {results.map((result, i) => (
           <div key={i} className="flex gap-3 bg-msrp-card rounded-lg p-3 border border-msrp-border">
@@ -82,22 +112,31 @@ export default function EndScreen({ results, stats, isPastGame = false, onPlayPa
         ))}
       </div>
 
-      <div className="space-y-2">
-        {!isPastGame && (
+      {!isPastGame && (
+        <div className="bg-msrp-card border border-msrp-border rounded-lg p-4 mb-2">
+          <p className="text-msrp-muted text-xs text-center mb-3">Share your results</p>
           <button
             onClick={handleShare}
-            className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all"
+            className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all flex items-center justify-center gap-2"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
             {copied ? 'Copied!' : 'Share Results'}
           </button>
-        )}
-        <button
-          onClick={onPlayPastGame}
-          className="w-full py-3 border border-msrp-border text-msrp-muted font-semibold rounded-lg hover:text-msrp-text hover:border-msrp-accent transition-colors"
-        >
-          Play a Previous Day
-        </button>
-      </div>
+        </div>
+      )}
+
+      <button
+        onClick={onPlayPastGame}
+        className="w-full py-3 border border-msrp-border text-msrp-muted font-semibold rounded-lg hover:text-msrp-text hover:border-msrp-accent transition-colors"
+      >
+        Play a Previous Day
+      </button>
     </div>
   );
 }

@@ -24,4 +24,8 @@ class GameStats(
     var highScore: Int? = null,
     @Column(name = "low_score", nullable = true)
     var lowScore: Int? = null,
+    @Column(name = "total_score", nullable = false)
+    var totalScore: Long = 0,
+    @Column(name = "score_count", nullable = false)
+    var scoreCount: Long = 0,
 )

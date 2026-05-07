@@ -14,6 +14,7 @@ import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
 import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
+import GlobalStatsModal from '../components/GlobalStatsModal';
 
 export default function PastGamePage() {
   const { date } = useParams<{ date: string }>();
@@ -38,6 +39,7 @@ export default function PastGamePage() {
 
   const [htpOpen, setHtpOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [globalStatsOpen, setGlobalStatsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pastPickerOpen, setPastPickerOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -51,6 +53,7 @@ export default function PastGamePage() {
         onHowToPlay={() => setHtpOpen(true)}
         onPastGame={() => setPastPickerOpen(true)}
         onStats={() => setStatsOpen(true)}
+        onGlobalStats={() => setGlobalStatsOpen(true)}
         onSettings={() => setSettingsOpen(true)}
       />
 
@@ -84,6 +87,7 @@ export default function PastGamePage() {
           <EndScreen
             results={results}
             stats={stats}
+            gameDate={items[0]?.game_date ?? date ?? ''}
             isPastGame
             onPlayPastGame={() => setPastPickerOpen(true)}
           />
@@ -120,6 +124,7 @@ export default function PastGamePage() {
 
       <HowToPlay open={htpOpen} onClose={() => setHtpOpen(false)} onContact={() => setContactOpen(true)} />
       <StatsModal open={statsOpen} onClose={() => setStatsOpen(false)} stats={stats} lastResults={null} />
+      <GlobalStatsModal open={globalStatsOpen} onClose={() => setGlobalStatsOpen(false)} gameDate={items[0]?.game_date ?? date ?? ''} />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onUpdate={updateSettings} />
       <PastGamePickerModal
         open={pastPickerOpen}
