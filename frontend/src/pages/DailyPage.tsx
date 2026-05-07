@@ -1,9 +1,10 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPuzzleNumber } from '../utils/share';
 import { useGameState, loadLastResults } from '../hooks/useGameState';
 import { useStats } from '../hooks/useStats';
 import { useSettings } from '../hooks/useSettings';
+import { useModal } from '../hooks/useModal';
 import { recordAnalytics, submitScore } from '../services/api';
 import LoadingScreen from '../components/LoadingScreen';
 import LandingPage from '../components/LandingPage';
@@ -28,18 +29,12 @@ function getTodayEST(): string {
 
 export default function DailyPage() {
   const navigate = useNavigate();
+  const { activeModal, openModal, closeModal, switchModal } = useModal();
   const { items, currentRound, results, gameState, error, startGame, submitGuess, nextRound, totalRounds } = useGameState({ persist: true });
   const { stats, recordGame } = useStats();
   const { settings, updateSettings } = useSettings();
 
   const hasRecorded = useRef(false);
-
-  const [htpOpen, setHtpOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [globalStatsOpen, setGlobalStatsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pastPickerOpen, setPastPickerOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     const today = getTodayEST();
@@ -69,11 +64,11 @@ export default function DailyPage() {
   const handlePlay = useCallback(() => {
     const shown = localStorage.getItem(HTP_SHOWN_KEY);
     if (!shown && stats.gamesPlayed === 0) {
-      setHtpOpen(true);
+      openModal('how-to-play');
       localStorage.setItem(HTP_SHOWN_KEY, '1');
     }
     startGame();
-  }, [startGame, stats.gamesPlayed]);
+  }, [startGame, stats.gamesPlayed, openModal]);
 
   const handleSelectPastGame = useCallback((date: string) => {
     navigate(`/previous_game/${date}`);
@@ -87,15 +82,13 @@ export default function DailyPage() {
 
   return (
     <div className="min-h-screen bg-msrp-bg flex flex-col items-center px-4 py-4">
-      {gameState !== 'landing' && (
-        <Header
-          onHowToPlay={() => setHtpOpen(true)}
-          onPastGame={() => setPastPickerOpen(true)}
-          onStats={() => setStatsOpen(true)}
-          onGlobalStats={() => setGlobalStatsOpen(true)}
-          onSettings={() => setSettingsOpen(true)}
-        />
-      )}
+      <Header
+        onHowToPlay={() => openModal('how-to-play')}
+        onPastGame={() => openModal('past-picker')}
+        onStats={() => openModal('stats')}
+        onGlobalStats={() => openModal('global-stats')}
+        onSettings={() => openModal('settings')}
+      />
 
       <main className="w-full max-w-[400px] flex-1">
         {gameState === 'landing' && (
@@ -122,14 +115,14 @@ export default function DailyPage() {
             results={results}
             stats={stats}
             gameDate={items[0]?.game_date ?? ''}
-            onPlayPastGame={() => setPastPickerOpen(true)}
+            onPlayPastGame={() => openModal('past-picker')}
           />
         )}
       </main>
 
       <footer className="mt-8 pb-4 text-center flex flex-col items-center gap-1.5">
         <button
-          onClick={() => setContactOpen(true)}
+          onClick={() => openModal('contact')}
           className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -155,12 +148,12 @@ export default function DailyPage() {
         </a>
       </footer>
 
-      <HowToPlay open={htpOpen} onClose={() => setHtpOpen(false)} onContact={() => setContactOpen(true)} />
-      <StatsModal open={statsOpen} onClose={() => setStatsOpen(false)} stats={stats} lastResults={lastResults} />
-      <GlobalStatsModal open={globalStatsOpen} onClose={() => setGlobalStatsOpen(false)} gameDate={items[0]?.game_date ?? ''} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onUpdate={updateSettings} />
-      <PastGamePickerModal open={pastPickerOpen} onClose={() => setPastPickerOpen(false)} onSelect={handleSelectPastGame} />
-      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+      <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
+      <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={lastResults} />
+      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={items[0]?.game_date ?? ''} />
+      <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
+      <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={handleSelectPastGame} />
+      <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
     </div>
   );
 }

@@ -62,7 +62,6 @@ export default function PastGamePickerModal({ open, onClose, onSelect }: PastGam
     if (availableDates.size === 0) return;
     const dates = Array.from(availableDates);
     onSelect(dates[Math.floor(Math.random() * dates.length)]);
-    onClose();
   }
 
   return (
@@ -133,7 +132,7 @@ export default function PastGamePickerModal({ open, onClose, onSelect }: PastGam
                   <button
                     key={dateStr}
                     disabled={!isAvailable}
-                    onClick={() => { onSelect(dateStr); onClose(); }}
+                    onClick={() => onSelect(dateStr)}
                     className={`
                       w-8 h-8 mx-auto rounded-full text-xs font-medium transition-colors
                       ${isToday ? 'ring-1 ring-msrp-accent' : ''}

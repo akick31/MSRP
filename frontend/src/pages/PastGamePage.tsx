@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { recordAnalytics } from '../services/api';
 import { useGameState } from '../hooks/useGameState';
 import { useStats } from '../hooks/useStats';
 import { useSettings } from '../hooks/useSettings';
+import { useModal } from '../hooks/useModal';
 import LoadingScreen from '../components/LoadingScreen';
 import GamePlay from '../components/GamePlay';
 import RevealScreen from '../components/RevealScreen';
@@ -19,6 +20,7 @@ import GlobalStatsModal from '../components/GlobalStatsModal';
 export default function PastGamePage() {
   const { date } = useParams<{ date: string }>();
   const navigate = useNavigate();
+  const { activeModal, openModal, closeModal, switchModal } = useModal();
   const { items, currentRound, results, gameState, error, startGame, submitGuess, nextRound, totalRounds } =
     useGameState({ overrideDate: date, persist: false });
   const { stats } = useStats();
@@ -37,24 +39,17 @@ export default function PastGamePage() {
     }
   }, [gameState]);
 
-  const [htpOpen, setHtpOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [globalStatsOpen, setGlobalStatsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pastPickerOpen, setPastPickerOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
-
   if (!date) { navigate('/'); return null; }
   if (gameState === 'loading') return <LoadingScreen error={error} />;
 
   return (
     <div className="min-h-screen bg-msrp-bg flex flex-col items-center px-4 py-4">
       <Header
-        onHowToPlay={() => setHtpOpen(true)}
-        onPastGame={() => setPastPickerOpen(true)}
-        onStats={() => setStatsOpen(true)}
-        onGlobalStats={() => setGlobalStatsOpen(true)}
-        onSettings={() => setSettingsOpen(true)}
+        onHowToPlay={() => openModal('how-to-play')}
+        onPastGame={() => openModal('past-picker')}
+        onStats={() => openModal('stats')}
+        onGlobalStats={() => openModal('global-stats')}
+        onSettings={() => openModal('settings')}
       />
 
       <div className="w-full max-w-[400px] mb-3 flex items-center justify-between">
@@ -89,14 +84,14 @@ export default function PastGamePage() {
             stats={stats}
             gameDate={items[0]?.game_date ?? date ?? ''}
             isPastGame
-            onPlayPastGame={() => setPastPickerOpen(true)}
+            onPlayPastGame={() => openModal('past-picker')}
           />
         )}
       </main>
 
       <footer className="mt-8 pb-4 text-center flex flex-col items-center gap-1.5">
         <button
-          onClick={() => setContactOpen(true)}
+          onClick={() => openModal('contact')}
           className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -122,16 +117,16 @@ export default function PastGamePage() {
         </a>
       </footer>
 
-      <HowToPlay open={htpOpen} onClose={() => setHtpOpen(false)} onContact={() => setContactOpen(true)} />
-      <StatsModal open={statsOpen} onClose={() => setStatsOpen(false)} stats={stats} lastResults={null} />
-      <GlobalStatsModal open={globalStatsOpen} onClose={() => setGlobalStatsOpen(false)} gameDate={items[0]?.game_date ?? date ?? ''} />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} onUpdate={updateSettings} />
+      <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
+      <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={null} />
+      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={items[0]?.game_date ?? date ?? ''} />
+      <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
       <PastGamePickerModal
-        open={pastPickerOpen}
-        onClose={() => setPastPickerOpen(false)}
+        open={activeModal === 'past-picker'}
+        onClose={closeModal}
         onSelect={d => navigate(`/previous_game/${d}`)}
       />
-      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
+      <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
     </div>
   );
 }

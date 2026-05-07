@@ -31,6 +31,8 @@ export interface RoundResult {
   score: number;
 }
 
+export type ModalId = 'how-to-play' | 'stats' | 'global-stats' | 'settings' | 'past-picker' | 'contact';
+
 export interface GlobalStats {
   date: string;
   highScore: number | null;
