@@ -47,14 +47,14 @@ export default function DailyPage() {
     if (gameState === 'finished') {
       if (!hasRecorded.current) {
         hasRecorded.current = true;
-        recordGame();
-        recordAnalytics('GAMES_PLAYED');
-      }
-      if (!scoreSubmitted.current) {
-        scoreSubmitted.current = true;
-        const gameDate = items[0]?.game_date ?? '';
         const totalScore = results.reduce((sum, r) => sum + r.score, 0);
-        if (gameDate) submitScore(totalScore, gameDate);
+        recordGame(totalScore);
+        recordAnalytics('GAMES_PLAYED');
+        if (!scoreSubmitted.current) {
+          scoreSubmitted.current = true;
+          const gameDate = items[0]?.game_date ?? '';
+          if (gameDate) submitScore(totalScore, gameDate);
+        }
       }
     }
   }, [gameState, results, items, recordGame]);

@@ -25,7 +25,7 @@ export default function StatsModal({ open, onClose, stats, lastResults }: StatsM
 
   return (
     <Modal open={open} onClose={onClose} title="Statistics">
-      <div className="grid grid-cols-4 gap-2 mb-6">
+      <div className="grid grid-cols-3 gap-2 mb-3">
         <div className="text-center">
           <div className="text-2xl font-bold text-msrp-text">{stats.gamesPlayed}</div>
           <div className="text-msrp-muted text-xs mt-1">Played</div>
@@ -38,6 +38,8 @@ export default function StatsModal({ open, onClose, stats, lastResults }: StatsM
           <div className="text-2xl font-bold text-msrp-text">{stats.maxStreak}</div>
           <div className="text-msrp-muted text-xs mt-1">Max Streak</div>
         </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-6">
         <div className="text-center">
           <div className="text-2xl font-bold text-msrp-text">
             {lastResults && lastResults.length > 0
@@ -45,6 +47,10 @@ export default function StatsModal({ open, onClose, stats, lastResults }: StatsM
               : '-'}
           </div>
           <div className="text-msrp-muted text-xs mt-1">Last Score</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-msrp-accent">{stats.highScore > 0 ? stats.highScore : '-'}</div>
+          <div className="text-msrp-muted text-xs mt-1">High Score</div>
         </div>
       </div>
 

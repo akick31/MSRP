@@ -30,6 +30,7 @@ function loadStats(): PlayerStats {
     maxStreak: 0,
     gamesPlayed: 0,
     lastPlayedDate: '',
+    highScore: 0,
   };
 }
 
@@ -40,7 +41,7 @@ function saveStats(stats: PlayerStats): void {
 export function useStats() {
   const [stats, setStats] = useState<PlayerStats>(loadStats);
 
-  const recordGame = useCallback(() => {
+  const recordGame = useCallback((score?: number) => {
     const today = getToday();
     const current = loadStats();
 
@@ -60,6 +61,7 @@ export function useStats() {
       maxStreak: Math.max(current.maxStreak, newStreak),
       gamesPlayed: current.gamesPlayed + 1,
       lastPlayedDate: today,
+      highScore: score !== undefined ? Math.max(current.highScore ?? 0, score) : (current.highScore ?? 0),
     };
 
     saveStats(updated);

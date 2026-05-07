@@ -36,6 +36,7 @@ export interface PlayerStats {
   maxStreak: number;
   gamesPlayed: number;
   lastPlayedDate: string;
+  highScore: number;
 }
 
 export interface GameProgress {
