@@ -1,0 +1,196 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'msrp-frontend-prd'
+        CONTAINER_NAME = 'MSRP-Frontend-PRD'
+        CONTAINER_NAME_BLUE = 'MSRP-Frontend-PRD-BLUE'
+        DOCKERFILE = 'Dockerfile_PRD'
+        GITHUB_PAT = credentials('Github PAT')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out the MSRP Frontend project...'
+                checkout scm
+            }
+        }
+
+        stage('Bump Version & Tag') {
+            when { branch 'main' }
+            steps {
+                script {
+                    def latestTag = sh(
+                        script: "git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0'",
+                        returnStdout: true
+                    ).trim()
+                    def version = latestTag.replaceFirst(/^v/, '')
+                    def parts   = version.tokenize('.')
+                    def major   = parts[0].toInteger()
+                    def minor   = parts[1].toInteger()
+                    def patch   = parts[2].toInteger()
+
+                    def msg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    if (msg.contains('[major]')) {
+                        major++; minor = 0; patch = 0
+                    } else if (msg.contains('[minor]')) {
+                        minor++; patch = 0
+                    } else {
+                        patch++
+                    }
+
+                    def newVersion = "v${major}.${minor}.${patch}"
+                    sh """
+                        git config user.email "jenkins@boxscore.build"
+                        git config user.name  "Jenkins"
+                        git tag -a ${newVersion} -m "Auto-release ${newVersion} [build ${env.BUILD_NUMBER}]"
+                        git push https://${env.GITHUB_PAT_USR}:${env.GITHUB_PAT_PSW}@github.com/\$(git remote get-url origin | sed 's|.*github.com[:/]||') ${newVersion}
+                    """
+                    env.VERSION = newVersion
+                    currentBuild.description = "Version: ${newVersion}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - ${newVersion}"
+                }
+            }
+        }
+
+        stage('Get Version') {
+            when { not { branch 'main' } }
+            steps {
+                script {
+                    def latestTag = sh(
+                        script: "git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0'",
+                        returnStdout: true
+                    ).trim()
+                    env.VERSION = latestTag
+                    currentBuild.description = "Version: ${latestTag}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - ${latestTag}"
+                }
+            }
+        }
+
+        stage('Generate .env File') {
+            steps {
+                script {
+                    echo 'Generating .env file...'
+                    dir('frontend') {
+                        sh """
+                            cat <<EOF > .env
+                            VITE_API_BASE_URL=https://api.msrpgame.com/api/v1/msrp
+                            EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image for MSRP Frontend...'
+                dir('frontend') {
+                    sh """
+                        docker build -f ${DOCKERFILE} -t ${IMAGE_NAME}:latest .
+                    """
+                }
+            }
+        }
+
+        stage('Start Blue Container') {
+            steps {
+                script {
+                    sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
+                    dir('frontend') {
+                        sh """
+                            docker run -d --name ${CONTAINER_NAME_BLUE} \\
+                                -p 11511:1011 \\
+                                --env-file .env \\
+                                ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    sleep(time: 15, unit: 'SECONDS')
+                    def healthy = false
+                    def attempts = 0
+                    def maxAttempts = 30
+                    while (!healthy && attempts < maxAttempts) {
+                        attempts++
+                        try {
+                            def status = sh(
+                                script: "docker exec ${env.CONTAINER_NAME_BLUE} wget -qO/dev/null http://127.0.0.1:1011/ && echo OK || echo FAIL",
+                                returnStdout: true
+                            ).trim()
+                            if (status == 'OK') {
+                                healthy = true
+                                echo "Blue container is healthy (attempt ${attempts})"
+                            }
+                        } catch (e) {
+                            // not ready yet
+                        }
+                        if (!healthy) {
+                            echo "Waiting for health check... attempt ${attempts}/${maxAttempts}"
+                            sleep(time: 5, unit: 'SECONDS')
+                        }
+                    }
+                    if (!healthy) {
+                        sh "docker logs ${CONTAINER_NAME_BLUE} --tail=50"
+                        sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
+                        error("Blue container failed to become healthy after ${maxAttempts * 5}s - rolled back")
+                    }
+                }
+            }
+        }
+
+        stage('Swap Containers') {
+            steps {
+                script {
+                    dir('frontend') {
+                        sh """
+                            docker stop ${CONTAINER_NAME} || true
+                            docker rm ${CONTAINER_NAME} || true
+                            docker stop ${CONTAINER_NAME_BLUE} || true
+                            docker rm ${CONTAINER_NAME_BLUE} || true
+                            docker run -d --restart=always --name ${CONTAINER_NAME} \\
+                                -p 1011:1011 \\
+                                --env-file .env \\
+                                ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    echo 'Cleaning up sensitive files...'
+                    sh 'rm -f frontend/.env'
+                }
+            }
+        }
+
+        stage('Cleanup Docker System') {
+            steps {
+                script {
+                    echo 'Pruning unused Docker resources...'
+                    sh 'docker system prune -f'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'MSRP Frontend PRD deployed successfully!'
+        }
+        failure {
+            echo 'MSRP Frontend PRD deployment failed.'
+            sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
+        }
+    }
+}
