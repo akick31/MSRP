@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'msrp-frontend-prd'
         CONTAINER_NAME = 'MSRP-Frontend-PRD'
+        CONTAINER_NAME_BLUE = 'MSRP-Frontend-PRD-BLUE'
         DOCKERFILE = 'Dockerfile_PRD'
     }
 
@@ -45,18 +46,6 @@ pipeline {
             }
         }
 
-        stage('Stop and Remove Existing Container') {
-            steps {
-                script {
-                    echo 'Stopping and removing the existing MSRP Frontend instance...'
-                    sh """
-                        docker stop ${CONTAINER_NAME} || echo "MSRP Frontend is not running."
-                        docker rm ${CONTAINER_NAME} || echo "No old MSRP Frontend instance to remove."
-                    """
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image for MSRP Frontend...'
@@ -68,15 +57,69 @@ pipeline {
             }
         }
 
-        stage('Run New Container') {
+        stage('Start Blue Container') {
             steps {
                 script {
-                    echo 'Running the new container...'
+                    sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
                     dir('frontend') {
                         sh """
-                            docker run -d --name ${CONTAINER_NAME} \
-                                -p 1011:1011 \
-                                --env-file .env \
+                            docker run -d --name ${CONTAINER_NAME_BLUE} \\
+                                -p 11511:1011 \\
+                                --env-file .env \\
+                                ${IMAGE_NAME}:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    sleep(time: 15, unit: 'SECONDS')
+                    def healthy = false
+                    def attempts = 0
+                    def maxAttempts = 30
+                    while (!healthy && attempts < maxAttempts) {
+                        attempts++
+                        try {
+                            def status = sh(
+                                script: "docker exec ${env.CONTAINER_NAME_BLUE} wget -qO/dev/null http://127.0.0.1:1011/ && echo OK || echo FAIL",
+                                returnStdout: true
+                            ).trim()
+                            if (status == 'OK') {
+                                healthy = true
+                                echo "Blue container is healthy (attempt ${attempts})"
+                            }
+                        } catch (e) {
+                            // not ready yet
+                        }
+                        if (!healthy) {
+                            echo "Waiting for health check... attempt ${attempts}/${maxAttempts}"
+                            sleep(time: 5, unit: 'SECONDS')
+                        }
+                    }
+                    if (!healthy) {
+                        sh "docker logs ${CONTAINER_NAME_BLUE} --tail=50"
+                        sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
+                        error("Blue container failed to become healthy after ${maxAttempts * 5}s - rolled back")
+                    }
+                }
+            }
+        }
+
+        stage('Swap Containers') {
+            steps {
+                script {
+                    dir('frontend') {
+                        sh """
+                            docker stop ${CONTAINER_NAME} || true
+                            docker rm ${CONTAINER_NAME} || true
+                            docker stop ${CONTAINER_NAME_BLUE} || true
+                            docker rm ${CONTAINER_NAME_BLUE} || true
+                            docker run -d --restart=always --name ${CONTAINER_NAME} \\
+                                -p 1011:1011 \\
+                                --env-file .env \\
                                 ${IMAGE_NAME}:latest
                         """
                     }
@@ -109,6 +152,7 @@ pipeline {
         }
         failure {
             echo 'MSRP Frontend PRD deployment failed.'
+            sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
         }
     }
 }
