@@ -37,7 +37,10 @@ export default function EndScreen({ results, stats, gameDate, isPastGame = false
 
   useEffect(() => {
     if (!gameDate) return;
-    fetchGlobalStats(gameDate).then(setGlobalStats).catch(() => {});
+    const timer = setTimeout(() => {
+      fetchGlobalStats(gameDate).then(setGlobalStats).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [gameDate]);
 
   async function handleShare() {
