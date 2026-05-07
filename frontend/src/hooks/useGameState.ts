@@ -42,7 +42,14 @@ function saveLastResults(results: RoundResult[]): void {
   localStorage.setItem(LAST_RESULTS_KEY, JSON.stringify(results));
 }
 
-export function useGameState() {
+interface UseGameStateOptions {
+  overrideDate?: string;
+  persist?: boolean;
+}
+
+export function useGameState(options: UseGameStateOptions = {}) {
+  const { overrideDate, persist = true } = options;
+
   const [items, setItems] = useState<DailyItem[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
   const [results, setResults] = useState<RoundResult[]>([]);
@@ -53,26 +60,36 @@ export function useGameState() {
     let cancelled = false;
 
     async function init() {
+      setGameState('loading');
+      setItems([]);
+      setCurrentRound(0);
+      setResults([]);
+      setError(null);
+
       try {
-        const todayItems = await fetchTodayItems();
+        const todayItems = await fetchTodayItems(overrideDate);
         if (cancelled) return;
 
         setItems(todayItems);
 
-        const gameDate = todayItems[0]?.game_date ?? getToday();
-        const saved = loadProgress(gameDate);
-        if (saved && saved.results.length > 0) {
-          setResults(saved.results);
-          if (saved.currentRound >= TOTAL_ROUNDS) {
-            setCurrentRound(TOTAL_ROUNDS);
-            setGameState('finished');
-          } else {
-            setCurrentRound(saved.currentRound);
-            setGameState('playing');
+        const gameDate = todayItems[0]?.game_date ?? (overrideDate ?? getToday());
+
+        if (persist) {
+          const saved = loadProgress(gameDate);
+          if (saved && saved.results.length > 0) {
+            setResults(saved.results);
+            if (saved.currentRound >= TOTAL_ROUNDS) {
+              setCurrentRound(TOTAL_ROUNDS);
+              setGameState('finished');
+            } else {
+              setCurrentRound(saved.currentRound);
+              setGameState('playing');
+            }
+            return;
           }
-        } else {
-          setGameState('landing');
         }
+
+        setGameState('landing');
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : 'Failed to load items');
@@ -82,7 +99,7 @@ export function useGameState() {
 
     init();
     return () => { cancelled = true; };
-  }, []);
+  }, [overrideDate, persist]);
 
   const startGame = useCallback(() => {
     setGameState('playing');
@@ -110,19 +127,21 @@ export function useGameState() {
       setResults(newResults);
       setGameState('revealing');
 
-      saveProgress({
-        date: items[0]?.game_date ?? getToday(),
-        currentRound: nextRound,
-        results: newResults,
-      });
+      if (persist) {
+        saveProgress({
+          date: items[0]?.game_date ?? getToday(),
+          currentRound: nextRound,
+          results: newResults,
+        });
 
-      if (nextRound >= TOTAL_ROUNDS) {
-        saveLastResults(newResults);
+        if (nextRound >= TOTAL_ROUNDS) {
+          saveLastResults(newResults);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to verify guess');
     }
-  }, [gameState, currentRound, items, results]);
+  }, [gameState, currentRound, items, results, persist]);
 
   const nextRound = useCallback(() => {
     const next = currentRound + 1;

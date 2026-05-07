@@ -5,6 +5,8 @@ import { buildShareText, copyToClipboard } from '../utils/share';
 interface EndScreenProps {
   results: RoundResult[];
   stats: PlayerStats;
+  isPastGame?: boolean;
+  onPlayPastGame?: () => void;
 }
 
 function formatPrice(price: number): string {
@@ -25,7 +27,7 @@ function getScoreDot(score: number): string {
   return 'bg-msrp-red';
 }
 
-export default function EndScreen({ results, stats }: EndScreenProps) {
+export default function EndScreen({ results, stats, isPastGame = false, onPlayPastGame }: EndScreenProps) {
   const [copied, setCopied] = useState(false);
 
   const totalScore = results.reduce((sum, r) => sum + r.score, 0);
@@ -46,16 +48,18 @@ export default function EndScreen({ results, stats }: EndScreenProps) {
         <p className="text-msrp-muted">Total Score: <span className="text-msrp-text font-bold">{totalScore}/500</span></p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-msrp-card rounded-lg p-4 border border-msrp-border text-center">
-          <div className="text-2xl font-bold text-msrp-text">{stats.currentStreak}</div>
-          <div className="text-msrp-muted text-xs mt-1">Current Streak</div>
+      {!isPastGame && (
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-msrp-card rounded-lg p-4 border border-msrp-border text-center">
+            <div className="text-2xl font-bold text-msrp-text">{stats.currentStreak}</div>
+            <div className="text-msrp-muted text-xs mt-1">Current Streak</div>
+          </div>
+          <div className="bg-msrp-card rounded-lg p-4 border border-msrp-border text-center">
+            <div className="text-2xl font-bold text-msrp-text">{stats.maxStreak}</div>
+            <div className="text-msrp-muted text-xs mt-1">Max Streak</div>
+          </div>
         </div>
-        <div className="bg-msrp-card rounded-lg p-4 border border-msrp-border text-center">
-          <div className="text-2xl font-bold text-msrp-text">{stats.maxStreak}</div>
-          <div className="text-msrp-muted text-xs mt-1">Max Streak</div>
-        </div>
-      </div>
+      )}
 
       <div className="space-y-2 mb-6">
         {results.map((result, i) => (
@@ -78,12 +82,22 @@ export default function EndScreen({ results, stats }: EndScreenProps) {
         ))}
       </div>
 
-      <button
-        onClick={handleShare}
-        className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all"
-      >
-        {copied ? 'Copied!' : 'Share Results'}
-      </button>
+      <div className="space-y-2">
+        {!isPastGame && (
+          <button
+            onClick={handleShare}
+            className="w-full py-3 bg-msrp-accent text-msrp-bg font-bold rounded-lg hover:brightness-110 active:brightness-90 transition-all"
+          >
+            {copied ? 'Copied!' : 'Share Results'}
+          </button>
+        )}
+        <button
+          onClick={onPlayPastGame}
+          className="w-full py-3 border border-msrp-border text-msrp-muted font-semibold rounded-lg hover:text-msrp-text hover:border-msrp-accent transition-colors"
+        >
+          Play a Previous Day
+        </button>
+      </div>
     </div>
   );
 }

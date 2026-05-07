@@ -1,10 +1,11 @@
 interface HeaderProps {
   onHowToPlay: () => void;
+  onPastGame: () => void;
   onStats: () => void;
   onSettings: () => void;
 }
 
-export default function Header({ onHowToPlay, onStats, onSettings }: HeaderProps) {
+export default function Header({ onHowToPlay, onPastGame, onStats, onSettings }: HeaderProps) {
   return (
     <header className="w-full max-w-[400px] flex items-center justify-between mb-4">
       <div className="flex items-center gap-1">
@@ -25,6 +26,19 @@ export default function Header({ onHowToPlay, onStats, onSettings }: HeaderProps
       <h1 className="text-xl font-bold text-msrp-text tracking-tight">MSRP</h1>
 
       <div className="flex items-center gap-1">
+        <button
+          onClick={onPastGame}
+          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
+          aria-label="Play a previous day"
+          title="Play a previous day"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </button>
         <button
           onClick={onStats}
           className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"

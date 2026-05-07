@@ -1,4 +1,4 @@
-package com.msrp.backend.dto
+package com.msrp.backend.model.dto
 
 data class VerifyRequest(
     val itemId: Long,

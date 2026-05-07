@@ -1,6 +1,6 @@
 package com.msrp.backend.scheduler
 
-import com.msrp.backend.service.ebay.EbayService
+import com.msrp.backend.services.ebay.EbayService
 import com.msrp.backend.util.Logger
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -10,7 +10,6 @@ import java.time.LocalDate
 class EbayCuratorScheduler(
     private val ebayService: EbayService,
 ) {
-
     @Scheduled(cron = "0 0 21 * * ?")
     fun curateDailyItems() {
         Logger.info("Starting daily eBay item curation")

@@ -1,66 +1,62 @@
 package com.msrp.backend.controllers
 
-import com.msrp.backend.dto.DailyItemResponse
-import com.msrp.backend.dto.VerifyRequest
-import com.msrp.backend.dto.VerifyResponse
-import com.msrp.backend.service.ebay.EbayService
-import com.msrp.backend.util.DTOConverter
+import com.msrp.backend.model.dto.ContactRequest
+import com.msrp.backend.model.dto.DailyItemResponse
+import com.msrp.backend.model.dto.VerifyRequest
+import com.msrp.backend.model.dto.VerifyResponse
+import com.msrp.backend.services.AnalyticsService
+import com.msrp.backend.services.ContactService
+import com.msrp.backend.services.GameService
 import org.springframework.http.ResponseEntity
-import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDate
 
-@CrossOrigin(origins = ["*"])
 @RestController
 @RequestMapping(ApiConstants.FULL_PATH)
 class GameController(
-    private val ebayService: EbayService,
-    private val dtoConverter: DTOConverter,
+    private val gameService: GameService,
+    private val analyticsService: AnalyticsService,
+    private val contactService: ContactService,
 ) {
-
     @GetMapping("/today")
     fun getTodayItems(
         @RequestParam(required = false) date: String?,
-    ): ResponseEntity<List<DailyItemResponse>> {
-        val gameDate = if (date != null) {
-            try { LocalDate.parse(date) } catch (e: Exception) { LocalDate.now() }
-        } else {
-            LocalDate.now()
-        }
-        val items = ebayService.getItemsForDate(gameDate)
-        val response = items.map { dtoConverter.convertToDailyItemResponse(it) }
-        return ResponseEntity.ok(response)
-    }
+    ): ResponseEntity<List<DailyItemResponse>> = gameService.getItemsForDate(date)
 
     @PostMapping("/verify")
     fun verifyGuess(
         @RequestBody request: VerifyRequest,
-    ): ResponseEntity<VerifyResponse> {
-        val response = ebayService.verifyGuess(request.itemId, request.guess)
-        return ResponseEntity.ok(response)
-    }
+    ): ResponseEntity<VerifyResponse> = gameService.verifyGuess(request)
+
+    @GetMapping("/available-dates")
+    fun getAvailableDates(): ResponseEntity<List<String>> = gameService.getAvailableDates()
+
+    @PostMapping("/analytics")
+    fun recordAnalytics(
+        @RequestBody body: Map<String, String>,
+    ): ResponseEntity<Any> = analyticsService.recordFromRequest(body)
+
+    @PostMapping("/score")
+    fun submitScore(
+        @RequestBody body: Map<String, String>,
+    ): ResponseEntity<Any> = analyticsService.submitScore(body)
+
+    @PostMapping("/contact")
+    fun contact(
+        @RequestBody request: ContactRequest,
+    ): ResponseEntity<Any> = contactService.send(request)
 
     @PostMapping("/admin/curate")
     fun triggerCuration(
         @RequestParam(required = false) date: String?,
-    ): ResponseEntity<Map<String, String>> {
-        return try {
-            val targetDate = if (date != null) {
-                try { LocalDate.parse(date) } catch (e: Exception) { LocalDate.now() }
-            } else {
-                LocalDate.now()
-            }
-            ebayService.curateDailyItems(targetDate)
-            ResponseEntity.ok(mapOf("message" to "Curation triggered for $targetDate"))
-        } catch (e: Exception) {
-            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(mapOf("error" to (e.message ?: "Curation failed")))
-        }
-    }
+    ): ResponseEntity<Map<String, String>> = gameService.triggerCuration(date)
+
+    @GetMapping("/admin/analytics")
+    fun getAnalytics(
+        @RequestParam(defaultValue = "30") days: Int,
+    ): ResponseEntity<Any> = analyticsService.getSummary(days)
 }

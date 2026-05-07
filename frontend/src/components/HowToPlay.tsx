@@ -3,12 +3,13 @@ import Modal from './Modal';
 interface HowToPlayProps {
   open: boolean;
   onClose: () => void;
+  onContact: () => void;
 }
 
-export default function HowToPlay({ open, onClose }: HowToPlayProps) {
+export default function HowToPlay({ open, onClose, onContact }: HowToPlayProps) {
   return (
     <Modal open={open} onClose={onClose} title="How to Play">
-      <div className="space-y-4 text-sm text-msrp-muted">
+      <div className="space-y-4 text-sm text-msrp-muted max-h-[70vh] overflow-y-auto">
         <p className="text-msrp-text font-medium">
           Guess the sold price of 5 real eBay auction items.
         </p>
@@ -54,6 +55,24 @@ export default function HowToPlay({ open, onClose }: HowToPlayProps) {
         <div className="border-t border-msrp-border pt-4">
           <p className="text-msrp-muted text-xs">
             A new set of 5 items is released daily at midnight. Play every day to increase your streak.
+          </p>
+        </div>
+
+        <div className="border-t border-msrp-border pt-4">
+          <p className="text-msrp-muted text-xs">
+            MSRP is a project by Andrew Kicklighter and is not affiliated with eBay.
+          </p>
+        </div>
+
+        <div className="border-t border-msrp-border pt-3 text-xs text-msrp-muted text-center">
+          <p>
+            Have a question, suggestion, or bug to report?{' '}
+            <button
+              onClick={() => { onClose(); onContact(); }}
+              className="text-msrp-accent hover:underline"
+            >
+              Contact me using this form.
+            </button>
           </p>
         </div>
       </div>

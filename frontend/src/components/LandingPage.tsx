@@ -1,6 +1,7 @@
 interface LandingPageProps {
   puzzleNumber: number;
   onPlay: () => void;
+  hidePuzzleNumber?: boolean;
 }
 
 function formatDate(): string {
@@ -12,7 +13,7 @@ function formatDate(): string {
   });
 }
 
-export default function LandingPage({ puzzleNumber, onPlay }: LandingPageProps) {
+export default function LandingPage({ puzzleNumber, onPlay, hidePuzzleNumber = false }: LandingPageProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
       <div className="text-5xl font-bold text-msrp-accent mb-2 tracking-tight">$</div>
@@ -21,10 +22,12 @@ export default function LandingPage({ puzzleNumber, onPlay }: LandingPageProps) 
         Guess the price that 5 real eBay auction items sold for.
       </p>
 
-      <div className="text-msrp-muted text-sm mb-8">
-        <div>{formatDate()}</div>
-        <div className="text-xs mt-1">No. {puzzleNumber}</div>
-      </div>
+      {!hidePuzzleNumber && (
+        <div className="text-msrp-muted text-sm mb-8">
+          <div>{formatDate()}</div>
+          <div className="text-xs mt-1">No. {puzzleNumber}</div>
+        </div>
+      )}
 
       <button
         onClick={onPlay}

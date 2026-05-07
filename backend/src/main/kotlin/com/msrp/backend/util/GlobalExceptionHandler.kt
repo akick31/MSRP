@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
     @ExceptionHandler(ItemNotFoundException::class)
     fun handleItemNotFound(e: ItemNotFoundException): ResponseEntity<Map<String, String>> {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

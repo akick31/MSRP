@@ -1,15 +1,14 @@
 package com.msrp.backend.util
 
-import com.msrp.backend.dto.DailyItemResponse
 import com.msrp.backend.model.DailyItem
+import com.msrp.backend.model.dto.DailyItemResponse
 import org.springframework.stereotype.Component
 import kotlin.math.roundToInt
 
 @Component
 class DTOConverter {
-
-    fun convertToDailyItemResponse(item: DailyItem): DailyItemResponse {
-        return DailyItemResponse(
+    fun convertToDailyItemResponse(item: DailyItem): DailyItemResponse =
+        DailyItemResponse(
             id = item.id,
             ebayItemId = item.ebayItemId,
             gameDate = item.gameDate.toString(),
@@ -20,7 +19,6 @@ class DTOConverter {
             priceChoices = generatePriceChoices(item.soldPrice),
             saleDate = item.saleDate?.toString(),
         )
-    }
 
     private fun generatePriceChoices(actualPrice: Double): List<Double> {
         val decoys = mutableListOf<Double>()
@@ -35,8 +33,8 @@ class DTOConverter {
         return (decoys + actualPrice).shuffled()
     }
 
-    private fun roundToNicePrice(price: Double): Double {
-        return when {
+    private fun roundToNicePrice(price: Double): Double =
+        when {
             price < 5 -> (price * 4).roundToInt() / 4.0
             price < 20 -> (price * 2).roundToInt() / 2.0
             price < 100 -> price.roundToInt().toDouble()
@@ -44,5 +42,4 @@ class DTOConverter {
             price < 2000 -> (price / 25).roundToInt() * 25.0
             else -> (price / 100).roundToInt() * 100.0
         }
-    }
 }
