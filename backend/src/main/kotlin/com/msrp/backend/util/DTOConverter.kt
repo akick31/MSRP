@@ -2,11 +2,9 @@ package com.msrp.backend.util
 
 import com.msrp.backend.model.DailyItem
 import com.msrp.backend.model.dto.DailyItemResponse
-import org.springframework.stereotype.Component
 import kotlin.math.roundToInt
 
-@Component
-class DTOConverter {
+object DTOConverter {
     fun convertToDailyItemResponse(item: DailyItem): DailyItemResponse =
         DailyItemResponse(
             id = item.id,

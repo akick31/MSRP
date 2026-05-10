@@ -16,6 +16,8 @@ import SettingsModal from '../components/SettingsModal';
 import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
 import GlobalStatsModal from '../components/GlobalStatsModal';
+import ProjectsModal from '../components/ProjectsModal';
+import Footer from '../components/Footer';
 
 export default function PastGamePage() {
   const { date } = useParams<{ date: string }>();
@@ -89,53 +91,15 @@ export default function PastGamePage() {
         )}
       </main>
 
-      <footer className="mt-8 pb-4 text-center flex flex-col items-center gap-1.5">
-        <button
-          onClick={() => openModal('contact')}
-          className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-          <span>Contact Me</span>
-        </button>
-        <a
-            href="https://ko-fi.com/andrewk26515"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sv-muted text-xs hover:text-sv-accent transition-colors"
-        >
-          <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-          >
-              <polyline points="16 18 22 12 16 6"/>
-              <polyline points="8 6 2 12 8 18"/>
-          </svg>
-          <span>Support Development</span>
-        </a>
-      </footer>
+      <Footer onOpenModal={openModal} />
 
-        <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')}/>
-        <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={null}/>
-        <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal}
-                          gameDate={items[0]?.game_date ?? date ?? ''}/>
-        <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings}
-                       onUpdate={updateSettings}/>
-        <PastGamePickerModal
-            open={activeModal === 'past-picker'}
-            onClose={closeModal}
-            onSelect={d => navigate(`/previous_game/${d}`)}
-        />
-        <ContactModal open={activeModal === 'contact'} onClose={closeModal}/>
+      <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
+      <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={null} />
+      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={items[0]?.game_date ?? date ?? ''} />
+      <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
+      <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={d => navigate(`/previous_game/${d}`)} />
+      <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
+      <ProjectsModal open={activeModal === 'projects'} onClose={closeModal} />
     </div>
   );
 }

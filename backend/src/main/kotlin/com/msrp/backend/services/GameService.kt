@@ -16,13 +16,12 @@ private val EARLIEST_DATE: LocalDate = LocalDate.of(2025, 1, 1)
 class GameService(
     private val ebayService: EbayService,
     private val dailyItemRepository: DailyItemRepository,
-    private val dtoConverter: DTOConverter,
 ) {
     fun getItemsForDate(dateParam: String?): ResponseEntity<List<DailyItemResponse>> {
         return try {
             val date = parseDateParam(dateParam)
             val items = ebayService.getItemsForDate(date)
-            ResponseEntity.ok(items.map { dtoConverter.convertToDailyItemResponse(it) })
+            ResponseEntity.ok(items.map { DTOConverter.convertToDailyItemResponse(it) })
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().build()
         }

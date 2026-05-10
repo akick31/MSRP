@@ -2,6 +2,8 @@ package com.msrp.backend.services
 
 import com.msrp.backend.model.Analytics
 import com.msrp.backend.model.GameStats
+import com.msrp.backend.model.dto.AnalyticsRequest
+import com.msrp.backend.model.dto.SubmitScoreRequest
 import com.msrp.backend.repositories.AnalyticsRepository
 import com.msrp.backend.repositories.GameStatsRepository
 import org.slf4j.LoggerFactory
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import kotlin.math.roundToInt
 
 @Service
 class AnalyticsService(
@@ -18,15 +21,6 @@ class AnalyticsService(
     private val gameStatsRepository: GameStatsRepository,
 ) {
     private val log = LoggerFactory.getLogger(AnalyticsService::class.java)
-
-    companion object {
-        private val ZONE: ZoneId = ZoneId.of("America/New_York")
-        private val ALLOWED_EVENTS = setOf("UNIQUE_VISITORS", "GAMES_PLAYED", "REPLAY_PLAYED")
-        private const val MAX_SCORE = 500
-        private const val MIN_SCORE = 0
-
-        fun today(): LocalDate = ZonedDateTime.now(ZONE).toLocalDate()
-    }
 
     @Transactional
     fun record(eventType: String) {
@@ -43,12 +37,9 @@ class AnalyticsService(
         log.debug("Analytics recorded: {}", eventType)
     }
 
-    fun recordFromRequest(body: Map<String, String>): ResponseEntity<Any> {
+    fun recordFromRequest(request: AnalyticsRequest): ResponseEntity<Any> {
         return try {
-            val eventType =
-                body["eventType"]
-                    ?: return ResponseEntity.badRequest().body(mapOf("error" to "eventType required"))
-            record(eventType)
+            record(request.eventType)
             ResponseEntity.ok(mapOf("ok" to true))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
@@ -58,21 +49,13 @@ class AnalyticsService(
     }
 
     @Transactional
-    fun submitScore(body: Map<String, String>): ResponseEntity<Any> {
-        val scoreStr =
-            body["score"]
-                ?: return ResponseEntity.badRequest().body(mapOf("error" to "score required"))
-        val dateStr =
-            body["date"]
-                ?: return ResponseEntity.badRequest().body(mapOf("error" to "date required"))
-        val score =
-            scoreStr.toIntOrNull()
-                ?: return ResponseEntity.badRequest().body(mapOf("error" to "score must be an integer"))
+    fun submitScore(request: SubmitScoreRequest): ResponseEntity<Any> {
+        val score = request.score
         if (score < MIN_SCORE || score > MAX_SCORE) {
             return ResponseEntity.badRequest().body(mapOf("error" to "score must be between $MIN_SCORE and $MAX_SCORE"))
         }
         val gameDate =
-            runCatching { LocalDate.parse(dateStr) }.getOrElse {
+            runCatching { LocalDate.parse(request.date) }.getOrElse {
                 return ResponseEntity.badRequest().body(mapOf("error" to "invalid date format"))
             }
         val stats = gameStatsRepository.findByGameDate(gameDate) ?: GameStats(gameDate = gameDate)
@@ -96,7 +79,7 @@ class AnalyticsService(
                 "date" to gameDate.toString(),
                 "highScore" to stats?.highScore,
                 "lowScore" to stats?.lowScore,
-                "avgScore" to avg?.let { Math.round(it).toInt() },
+                "avgScore" to avg?.roundToInt(),
                 "playerCount" to (stats?.scoreCount ?: 0),
             ),
         )
@@ -119,5 +102,14 @@ class AnalyticsService(
                 "gameStats" to gameStats,
             ),
         )
+    }
+
+    private fun today(): LocalDate = ZonedDateTime.now(ZONE).toLocalDate()
+
+    companion object {
+        private val ZONE: ZoneId = ZoneId.of("America/New_York")
+        private val ALLOWED_EVENTS = setOf("UNIQUE_VISITORS", "GAMES_PLAYED", "REPLAY_PLAYED")
+        private const val MAX_SCORE = 500
+        private const val MIN_SCORE = 0
     }
 }

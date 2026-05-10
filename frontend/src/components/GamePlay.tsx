@@ -7,7 +7,7 @@ interface GamePlayProps {
   item: DailyItem;
   currentRound: number;
   totalRounds: number;
-  onSubmit: (guess: number) => void;
+  onSubmit: (guess: number) => Promise<void>;
 }
 
 export default function GamePlay({ item, currentRound, totalRounds, onSubmit }: GamePlayProps) {

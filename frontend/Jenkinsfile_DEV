@@ -6,7 +6,7 @@ pipeline {
         CONTAINER_NAME = 'MSRP-Frontend-DEV'
         CONTAINER_NAME_BLUE = 'MSRP-Frontend-DEV-BLUE'
         DOCKERFILE = 'Dockerfile_DEV'
-        EBAY_CLIENT_ID = credentials('MSRP_EBAY_CLIENT_ID')
+        VITE_API_BASE_URL = credentials('MSRP_VITE_API_BASE_URL_DEV')
     }
 
     stages {
@@ -20,14 +20,10 @@ pipeline {
         stage('Get Version') {
             steps {
                 script {
-                    def latestTag = sh(script: "git describe --tags --abbrev=0 2>/dev/null || echo '1.0.0'", returnStdout: true).trim()
-
-                    echo "Current Version: ${latestTag}"
-
+                    def latestTag = sh(script: "git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0'", returnStdout: true).trim()
                     env.VERSION = latestTag
-
-                    currentBuild.description = "Version: ${env.VERSION}"
-                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - Version: ${env.VERSION}"
+                    currentBuild.description = "Version: ${latestTag}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - ${latestTag}"
                 }
             }
         }
@@ -37,11 +33,7 @@ pipeline {
                 script {
                     echo 'Generating .env file...'
                     dir('frontend') {
-                        sh """
-                            cat <<EOF > .env
-                            VITE_API_BASE_URL=http://51.81.32.234:1313/api/v1/msrp
-                            EOF
-                        """
+                        sh "echo 'VITE_API_BASE_URL=${env.VITE_API_BASE_URL}' > .env"
                     }
                 }
             }

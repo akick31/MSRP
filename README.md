@@ -1,121 +1,70 @@
 # MSRP
 
-A daily game where players guess the final sold price of 5 real eBay auction items. Each item shows the title, image, and number of bids received. Players score 0-100 per item based on how close their guess is relative to the actual price, for a maximum total score of 500.
+A daily price guessing game. Five real eBay auction items are shown each day with their title, image, and bid count. Players choose from four price options per item and score 0-100 based on how close their guess is to the actual sold price, for a maximum daily total of 500.
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| Frontend | React, TypeScript, Vite, Tailwind CSS |
-| Backend | Spring Boot 3.3.5 (Kotlin), MariaDB |
+| Frontend | React + TypeScript + Vite, Tailwind CSS (custom `msrp-*` color tokens) |
+| Backend | Spring Boot 3.3.5 (Kotlin), MariaDB, Jsoup (eBay scraping) |
+| Build | Gradle (Kotlin DSL) for backend, npm/Vite for frontend |
 
-## Game Mechanics
+The frontend proxies `/api` to the backend in dev. In production the backend serves on port 777; the frontend is a separate static build.
 
-- Five eBay sold listings per day, curated automatically
-- Score per item is based on percentage accuracy relative to the actual sale price
-- Daily mode tracks win streaks and personal high score
-- Previous Day mode lets players replay any past date without affecting daily stats or analytics
-- Global stats (high score, low score, average) are shown on the results screen per game date
+## REST API (`/api/v1/msrp`)
 
-## Project Structure
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/today?date=YYYY-MM-DD` | Returns today's (or specified date's) 5 items with price choices |
+| POST | `/verify` | Body: `{ itemId, guess }` -- returns score and actual price |
+| GET | `/available-dates` | List of past dates with games, for the replay picker |
+| POST | `/analytics` | Body: `{ eventType }` -- records UNIQUE_VISITORS, GAMES_PLAYED, REPLAY_PLAYED |
+| POST | `/score` | Body: `{ score, date }` -- submits final score to global leaderboard |
+| GET | `/game-stats?date=YYYY-MM-DD` | Returns high/low/avg score for a game date |
+| POST | `/contact` | Body: `{ name, email, subject, message }` -- sends email |
+| POST | `/admin/curate` | Auth-gated; triggers eBay item curation for a date |
+| GET | `/admin/analytics?days=30` | Auth-gated; returns event + game stats summary |
 
-```
-MSRP/
-  backend/    Spring Boot API, eBay item curation
-  frontend/   React app
-```
+## Game mechanics
 
-### Backend
+- 5 eBay sold auction listings per day, curated automatically each night at 9 PM
+- Each round shows the item title, image, bid count, and 4 price choices (one correct, three decoys)
+- Score per item: 100 points for exact match, scaling down based on percentage off
+- Maximum total score per day: 500
+- Decoy prices are generated as 25%, 50%, and 250% of the actual price, rounded to natural increments
+- Past Game mode replays any prior date without affecting streaks or analytics
 
-```
-backend/src/main/kotlin/com/msrp/backend/
-  controllers/      REST endpoints
-  filters/          CORS, admin auth (X-Admin-Key header)
-  services/
-    GameService         Item fetching, guess verification, available dates
-    AnalyticsService    Event rollup, per-date score tracking
-    ContactService      Contact form email delivery
-    ebay/
-      EbayService       eBay sold listing search and curation
-  model/            JPA entities and DTOs
-  repositories/     Spring Data JPA repositories
-  scheduler/        Daily curation job
-  util/             Exception handling, DTO conversion, logging
-```
+## Score calculation
 
-### Frontend
+Scoring is percentage-based relative to the actual price. A guess within a small margin earns close to 100; a guess far off earns close to 0. The formula is applied per item.
 
-```
-frontend/src/
-  pages/        DailyPage, PastGamePage
-  components/   Header, GamePlay, RevealScreen, EndScreen, LoadingScreen,
-                HowToPlay, StatsModal, GlobalStatsModal, SettingsModal,
-                PastGamePickerModal, ContactModal, LandingPage, Modal
-  hooks/        useGameState, useStats, useSettings, useModal
-  services/     api.ts
-  utils/        share
-  types/        index.ts
-```
+## Item curation
 
-## REST API
+- Runs nightly at 9 PM via `@Scheduled` in `EbayCuratorScheduler`
+- Curates items for the next 1-2 days
+- Scrapes eBay sold auction listings by category using Jsoup
+- Filters for items with images, valid prices, and reasonable bid counts
+- Stores items in the `daily_item` table keyed by `game_date`
 
-Base path: `/api/v1/msrp`
+## Admin auth
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/today` | None | Returns the 5 items for today (or a given date via `?date=`) |
-| POST | `/verify` | None | Submit a price guess; returns actual price and score |
-| GET | `/available-dates` | None | Dates with available game items |
-| GET | `/game-stats` | None | Global high/low/avg score for a given date via `?date=` |
-| POST | `/analytics` | None | Record an analytics event |
-| POST | `/score` | None | Submit a completed game score for global stat tracking |
-| POST | `/contact` | None | Send a contact form email |
-| POST | `/admin/curate` | X-Admin-Key | Manually trigger item curation for a date |
-| GET | `/admin/analytics` | X-Admin-Key | Analytics event summary |
+The `/admin/*` endpoints require an `X-Admin-Key` header matching `msrp.admin.api-key` in `application.properties`. The check uses constant-time comparison to prevent timing attacks.
 
-## Dev Setup
-
-**Backend**
+## Dev setup
 
 ```bash
-cd backend
-./gradlew bootRun
+# Backend
+cd backend && ./gradlew bootRun
+
+# Frontend
+cd frontend && npm install && npm run dev
 ```
 
-Requires Java 17+. Configuration is in `src/main/resources/application.properties` (not committed). The backend runs on port 777 by default.
+Frontend dev server proxies `/api` to `localhost:777`.
 
-**Frontend**
+## Config notes (`application.properties`)
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The dev server runs on port 3000 and proxies `/api` to `localhost:777`.
-
-## Item Curation
-
-A scheduled job runs daily at 9:00 PM UTC and curates eBay sold listings for the next 2 days. Items are pulled from eBay's completed listings search. Curation can also be triggered manually via the `/admin/curate` endpoint.
-
-## Analytics
-
-Three events are tracked per calendar day (EST):
-
-| Event | When |
-|---|---|
-| `UNIQUE_VISITORS` | Once per browser per day (localStorage-gated) |
-| `GAMES_PLAYED` | When a daily game is completed |
-| `REPLAY_PLAYED` | When a past game is completed |
-
-Per-date global scores are stored separately in the `game_stats` table with high score, low score, total score, and player count.
-
-## Linting
-
-The backend uses ktlint via the `org.jlleitschuh.gradle.ktlint` Gradle plugin.
-
-```bash
-cd backend
-./gradlew ktlintCheck   # check for violations
-./gradlew ktlintFormat  # auto-fix violations
-```
+- `spring.mail.password` must be a Gmail App Password (not the account password). Generate at myaccount.google.com -- Security -- App passwords.
+- `msrp.admin.api-key` gates the `/admin/*` endpoints.
+- `cors.allowed.origins` is a comma-separated list of allowed frontend origins.

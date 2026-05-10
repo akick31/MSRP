@@ -53,7 +53,7 @@ export async function submitScore(score: number, date: string): Promise<void> {
     await fetch(`${API_BASE_URL}/score`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score: String(score), date }),
+      body: JSON.stringify({ score, date }),
     });
   } catch (e) {
     console.error('[analytics] failed to submit score', e);
