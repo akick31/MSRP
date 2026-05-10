@@ -7,6 +7,7 @@ pipeline {
         CONTAINER_NAME_BLUE = 'MSRP-Frontend-PRD-BLUE'
         DOCKERFILE = 'Dockerfile_PRD'
         GITHUB_PAT = credentials('Github PAT')
+        VITE_API_BASE_URL = credentials('MSRP_VITE_API_BASE_URL')
     }
 
     stages {
@@ -74,11 +75,7 @@ pipeline {
                 script {
                     echo 'Generating .env file...'
                     dir('frontend') {
-                        sh """
-                            cat <<EOF > .env
-                            VITE_API_BASE_URL=https://api.msrpgame.com/api/v1/msrp
-                            EOF
-                        """
+                        sh "echo 'VITE_API_BASE_URL=${env.VITE_API_BASE_URL}' > .env"
                     }
                 }
             }

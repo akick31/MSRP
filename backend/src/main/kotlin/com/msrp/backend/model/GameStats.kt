@@ -20,9 +20,9 @@ class GameStats(
     var id: Long? = null,
     @Column(name = "game_date", nullable = false)
     var gameDate: LocalDate,
-    @Column(name = "high_score", nullable = true)
+    @Column(name = "high_score")
     var highScore: Int? = null,
-    @Column(name = "low_score", nullable = true)
+    @Column(name = "low_score")
     var lowScore: Int? = null,
     @Column(name = "total_score", nullable = false)
     var totalScore: Long = 0,

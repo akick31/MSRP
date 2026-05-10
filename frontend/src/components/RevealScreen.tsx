@@ -1,5 +1,6 @@
 import { RoundResult } from '../types';
 import { ebayHighResImageUrl } from '../utils/ebayImage';
+import { getScoreColor, getScoreBg } from '../utils/scoreUtils';
 import ProgressBar from './ProgressBar';
 
 interface RevealScreenProps {
@@ -7,20 +8,6 @@ interface RevealScreenProps {
   currentRound: number;
   totalRounds: number;
   onNext: () => void;
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 90) return 'text-msrp-green';
-  if (score >= 70) return 'text-msrp-yellow';
-  if (score >= 40) return 'text-msrp-orange';
-  return 'text-msrp-red';
-}
-
-function getScoreBg(score: number): string {
-  if (score >= 90) return 'bg-msrp-green/10 border-msrp-green/30';
-  if (score >= 70) return 'bg-msrp-yellow/10 border-msrp-yellow/30';
-  if (score >= 40) return 'bg-msrp-orange/10 border-msrp-orange/30';
-  return 'bg-msrp-red/10 border-msrp-red/30';
 }
 
 function formatPrice(price: number): string {

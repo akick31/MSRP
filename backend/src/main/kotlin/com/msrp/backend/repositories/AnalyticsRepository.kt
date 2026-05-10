@@ -10,11 +10,6 @@ import java.time.LocalDate
 
 @Repository
 interface AnalyticsRepository : JpaRepository<Analytics, Long> {
-    fun findByEventDateAndEventType(
-        eventDate: LocalDate,
-        eventType: String,
-    ): Analytics?
-
     fun findByEventDateBetween(
         start: LocalDate,
         end: LocalDate,

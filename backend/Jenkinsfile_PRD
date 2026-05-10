@@ -12,6 +12,7 @@ pipeline {
         ADMIN_API_KEY = credentials('MSRP_ADMIN_API_KEY')
         MAIL_USERNAME = credentials('MSRP_MAIL_USERNAME')
         MAIL_PASSWORD = credentials('MSRP_MAIL_PASSWORD')
+        CORS_ALLOWED_ORIGINS = credentials('MSRP_CORS_ALLOWED_ORIGINS')
         JAVA_HOME = '/usr/lib/jvm/java-17-openjdk-amd64'
         PATH = "/usr/lib/jvm/java-17-openjdk-amd64/bin:${env.PATH}"
         GITHUB_PAT = credentials('Github PAT')
@@ -82,31 +83,33 @@ pipeline {
                 echo 'Creating the production properties file...'
                 dir('backend') {
                     script {
-                        def propertiesContent = """
-                            server.port=1010
-                            spring.datasource.url=jdbc:mariadb://51.81.32.234:3306/msrp
-                            spring.datasource.username=${env.DB_USERNAME}
-                            spring.datasource.password=${env.DB_PASSWORD}
-                            spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
-                            spring.jpa.hibernate.ddl-auto=update
-                            spring.jpa.show-sql=false
-                            spring.jackson.property-naming-strategy=SNAKE_CASE
-                            spring.jpa.open-in-view=false
-                            msrp.admin.api-key=${env.ADMIN_API_KEY}
-                            spring.mail.host=smtp.gmail.com
-                            spring.mail.port=587
-                            spring.mail.username=${env.MAIL_USERNAME}
-                            spring.mail.password=${env.MAIL_PASSWORD}
-                            spring.mail.properties.mail.smtp.auth=true
-                            spring.mail.properties.mail.smtp.starttls.enable=true
-                            management.endpoints.web.exposure.include=health
-                            management.endpoint.health.show-details=always
-                            management.health.defaults.enabled=true
-                            management.health.db.enabled=true
-                            logging.level.org.hibernate=warn
-                            logging.level.org.hibernate.SQL=warn
-                            logging.level.org.hibernate.type.descriptor.sql=warn
-                        """.stripIndent()
+                        def propertiesContent = """\
+server.port=1010
+spring.application.name=msrp
+cors.allowed.origins=${env.CORS_ALLOWED_ORIGINS}
+management.endpoints.web.exposure.include=health
+
+spring.datasource.url=jdbc:mariadb://51.81.32.234:3306/msrp
+spring.datasource.username=${env.DB_USERNAME}
+spring.datasource.password=${env.DB_PASSWORD}
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDBDialect
+spring.jpa.open-in-view=false
+spring.jackson.property-naming-strategy=SNAKE_CASE
+
+msrp.admin.api-key=${env.ADMIN_API_KEY}
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${env.MAIL_USERNAME}
+spring.mail.password=${env.MAIL_PASSWORD}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+api.base-path=/api/v1/msrp
+"""
 
                         writeFile file: "${env.APP_PROPERTIES}", text: propertiesContent
                     }

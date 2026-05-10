@@ -23,7 +23,7 @@ export default function GlobalStatsModal({ open, onClose, gameDate }: GlobalStat
   }, [open, gameDate]);
 
   function fmt(val: number | null): string {
-    return val !== null && val !== undefined ? String(val) : '—';
+    return val !== null ? String(val) : '—';
   }
 
   return (
