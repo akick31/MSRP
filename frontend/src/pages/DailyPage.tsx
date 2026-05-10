@@ -17,6 +17,7 @@ import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
 import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
+import ProjectsModal from '../components/ProjectsModal';
 import GlobalStatsModal from '../components/GlobalStatsModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
@@ -132,20 +133,29 @@ export default function DailyPage() {
           <span>Contact Me</span>
         </button>
         <a
-          href="https://buymeacoffee.com/flying_porygon"
+          href="https://ko-fi.com/andrewk26515"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
-            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
-            <line x1="6" y1="1" x2="6" y2="4" />
-            <line x1="10" y1="1" x2="10" y2="4" />
-            <line x1="14" y1="1" x2="14" y2="4" />
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
           </svg>
-          Buy me a coffee
+          <span>Support Development</span>
         </a>
+        <button
+          onClick={() => openModal('projects')}
+          className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+          </svg>
+          <span>My Other Projects</span>
+        </button>
       </footer>
 
       <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
@@ -154,6 +164,7 @@ export default function DailyPage() {
       <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
       <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={handleSelectPastGame} />
       <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
+      <ProjectsModal open={activeModal === 'projects'} onClose={closeModal} />
     </div>
   );
 }
