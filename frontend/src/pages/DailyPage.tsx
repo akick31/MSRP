@@ -17,6 +17,7 @@ import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
 import PastGamePickerModal from '../components/PastGamePickerModal';
 import ContactModal from '../components/ContactModal';
+import ProjectsModal from '../components/ProjectsModal';
 import GlobalStatsModal from '../components/GlobalStatsModal';
 
 const HTP_SHOWN_KEY = 'msrp-htp-shown';
@@ -154,16 +155,27 @@ export default function DailyPage() {
           </svg>
           <span>Support Development</span>
         </a>
+        <button
+          onClick={() => openModal('projects')}
+          className="inline-flex items-center gap-1 text-msrp-muted text-xs hover:text-msrp-accent transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+          </svg>
+          <span>My Other Projects</span>
+        </button>
       </footer>
 
-      <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')}/>
-      <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={lastResults}/>
-      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal}
-                        gameDate={items[0]?.game_date ?? ''}/>
-      <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings}
-                     onUpdate={updateSettings}/>
-      <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={handleSelectPastGame}/>
-      <ContactModal open={activeModal === 'contact'} onClose={closeModal}/>
+      <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
+      <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={lastResults} />
+      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={items[0]?.game_date ?? ''} />
+      <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
+      <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={handleSelectPastGame} />
+      <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
+      <ProjectsModal open={activeModal === 'projects'} onClose={closeModal} />
     </div>
   );
 }
