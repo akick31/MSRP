@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+*.local
+
+### IDE ###
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+
+### Mac ###
+.DS_Store
