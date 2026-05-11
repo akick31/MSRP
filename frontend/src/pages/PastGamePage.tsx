@@ -19,6 +19,11 @@ import GlobalStatsModal from '../components/GlobalStatsModal';
 import ProjectsModal from '../components/ProjectsModal';
 import Footer from '../components/Footer';
 
+function getToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function PastGamePage() {
   const { date } = useParams<{ date: string }>();
   const navigate = useNavigate();
@@ -95,7 +100,7 @@ export default function PastGamePage() {
 
       <HowToPlay open={activeModal === 'how-to-play'} onClose={closeModal} onContact={() => switchModal('contact')} />
       <StatsModal open={activeModal === 'stats'} onClose={closeModal} stats={stats} lastResults={null} />
-      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={items[0]?.game_date ?? date ?? ''} />
+      <GlobalStatsModal open={activeModal === 'global-stats'} onClose={closeModal} gameDate={getToday()} />
       <SettingsModal open={activeModal === 'settings'} onClose={closeModal} settings={settings} onUpdate={updateSettings} />
       <PastGamePickerModal open={activeModal === 'past-picker'} onClose={closeModal} onSelect={d => navigate(`/previous_game/${d}`)} />
       <ContactModal open={activeModal === 'contact'} onClose={closeModal} />
