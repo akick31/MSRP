@@ -35,8 +35,7 @@ object EbayParser {
     private val imageUpgradeRegex = Regex("""/s-l\d+""", RegexOption.IGNORE_CASE)
     private val priceStripRegex = Regex("[^0-9.]")
 
-    fun parseSerpRows(html: String): List<org.jsoup.nodes.Element> =
-        collectSerpListingElements(Jsoup.parse(html))
+    fun parseSerpRows(html: String): List<org.jsoup.nodes.Element> = collectSerpListingElements(Jsoup.parse(html))
 
     private fun collectSerpListingElements(doc: org.jsoup.nodes.Document): List<org.jsoup.nodes.Element> {
         val seen = java.util.IdentityHashMap<org.jsoup.nodes.Element, Boolean>()
@@ -97,8 +96,7 @@ object EbayParser {
         }
     }
 
-    fun ebayImagePathPixelHint(url: String): Int =
-        pixelHintRegex.find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    fun ebayImagePathPixelHint(url: String): Int = pixelHintRegex.find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
     fun upgradeEbayImageUrl(url: String): String {
         if (!url.contains("ebayimg", ignoreCase = true)) return url
