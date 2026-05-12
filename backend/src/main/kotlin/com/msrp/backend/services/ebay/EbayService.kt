@@ -35,7 +35,7 @@ class EbayService(
 
     private val desktopUa =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            "(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
 
     private val bidCountRegex = Regex("(\\d+)\\s+bid", RegexOption.IGNORE_CASE)
 
@@ -146,7 +146,7 @@ class EbayService(
                 .header("Sec-Fetch-Mode", "navigate")
                 .header("Sec-Fetch-Site", if (referer != null) "same-origin" else "none")
                 .header("Sec-Fetch-User", "?1")
-                .header("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"")
+                .header("sec-ch-ua", "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not-A.Brand\";v=\"24\"")
                 .header("sec-ch-ua-mobile", "?0")
                 .header("sec-ch-ua-platform", "\"macOS\"")
         if (referer != null) builder.header("Referer", referer)
