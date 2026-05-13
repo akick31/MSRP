@@ -8,7 +8,9 @@ import com.msrp.backend.util.ItemNotFoundException
 import com.msrp.backend.util.NoItemsAvailableException
 import com.msrp.backend.util.SEARCH_CATEGORIES
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.io.File
 import java.net.CookieManager
 import java.net.URI
 import java.net.URLEncoder
@@ -23,13 +25,16 @@ import kotlin.math.ln
 @Service
 class EbayService(
     private val dailyItemRepository: DailyItemRepository,
+    @Value("\${msrp.image-storage-dir:./images}") private val imageStorageDir: String,
+    @Value("\${msrp.image-upload-url:}") private val imageUploadUrl: String,
+    @Value("\${msrp.admin.api-key}") private val adminApiKey: String,
 ) {
     private val log = LoggerFactory.getLogger(EbayService::class.java)
 
     private val itemsPerDay = 5
     private val minBidCount = 5
     private val maxConsecutiveFailures = 3
-    private val requestDelayMs = 1500L..3000L
+    private val requestDelayMs = 3000L..6000L
     private val httpRequestTimeout: Duration = Duration.ofSeconds(20)
     private val httpConnectTimeout: Duration = Duration.ofSeconds(10)
 
@@ -112,6 +117,7 @@ class EbayService(
             consecutiveFailures = 0
             val pick = usable.random()
             pick.gameDate = targetDate
+            pick.imageUrl = downloadImage(pick.imageUrl, pick.ebayItemId)
             curatedItems.add(pick)
             usedIds.add(pick.ebayItemId)
             log.info("Selected from '{}': {} — \${} ({} bids)", keyword, pick.title, pick.soldPrice, pick.bidCount)
@@ -124,6 +130,86 @@ class EbayService(
         }
         if (curatedItems.size < itemsPerDay) {
             log.warn("Only curated {}/{} items for {}", curatedItems.size, itemsPerDay, targetDate)
+        }
+    }
+
+    fun curateDateRange(
+        startDate: LocalDate,
+        endDate: LocalDate,
+    ) {
+        log.info("Starting bulk curation: {} through {}", startDate, endDate)
+        var current = startDate
+        while (!current.isAfter(endDate)) {
+            try {
+                curateDailyItems(current)
+            } catch (e: Exception) {
+                log.error("Curation failed for {}: {}", current, e.message)
+            }
+            if (!current.isEqual(endDate)) Thread.sleep(10000L)
+            current = current.plusDays(1)
+        }
+        log.info("Bulk curation complete: {} through {}", startDate, endDate)
+    }
+
+    fun storeImage(
+        itemId: String,
+        bytes: ByteArray,
+    ) {
+        val dir = File(imageStorageDir).apply { mkdirs() }
+        File(dir, "$itemId.jpg").writeBytes(bytes)
+    }
+
+    private fun downloadImage(
+        imageUrl: String,
+        itemId: String,
+    ): String {
+        val dir = File(imageStorageDir).apply { mkdirs() }
+        val file = File(dir, "$itemId.jpg")
+        if (file.exists()) {
+            uploadImage(itemId, file.readBytes())
+            return "/images/$itemId.jpg"
+        }
+        return try {
+            val request =
+                HttpRequest.newBuilder(URI.create(imageUrl))
+                    .timeout(httpRequestTimeout)
+                    .GET()
+                    .header("User-Agent", desktopUa)
+                    .build()
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+            if (response.statusCode() in 200..299) {
+                val bytes = response.body()
+                file.writeBytes(bytes)
+                uploadImage(itemId, bytes)
+                "/images/$itemId.jpg"
+            } else {
+                imageUrl
+            }
+        } catch (e: Exception) {
+            log.warn("Failed to download image for item {}: {}", itemId, e.message)
+            imageUrl
+        }
+    }
+
+    private fun uploadImage(
+        itemId: String,
+        bytes: ByteArray,
+    ) {
+        if (imageUploadUrl.isBlank()) return
+        try {
+            val request =
+                HttpRequest.newBuilder(URI.create("$imageUploadUrl/$itemId"))
+                    .timeout(httpRequestTimeout)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(bytes))
+                    .header("Content-Type", "application/octet-stream")
+                    .header("X-Admin-Key", adminApiKey)
+                    .build()
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.discarding())
+            if (response.statusCode() !in 200..299) {
+                log.warn("Image upload failed for item {} — HTTP {}", itemId, response.statusCode())
+            }
+        } catch (e: Exception) {
+            log.warn("Image upload failed for item {}: {}", itemId, e.message)
         }
     }
 

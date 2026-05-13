@@ -109,6 +109,9 @@ spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
 api.base-path=/api/v1/msrp
+
+msrp.image-storage-dir=/app/images
+msrp.image-upload-url=
 """
 
                         writeFile file: "${env.APP_PROPERTIES}", text: propertiesContent
@@ -196,7 +199,9 @@ api.base-path=/api/v1/msrp
                     docker rm ${CONTAINER_NAME} || true
                     docker stop ${CONTAINER_NAME_BLUE} || true
                     docker rm ${CONTAINER_NAME_BLUE} || true
+                    mkdir -p /opt/msrp/images
                     docker run --network="host" -d --restart=always --name ${CONTAINER_NAME} \\
+                        -v /opt/msrp/images:/app/images \\
                         ${IMAGE_NAME}:${DOCKERFILE}
                 """
             }

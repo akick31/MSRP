@@ -2,8 +2,10 @@ package com.msrp.backend.controllers
 
 import com.msrp.backend.model.dto.VerifyRequest
 import com.msrp.backend.services.GameService
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -26,8 +28,16 @@ class GameController(private val gameService: GameService) {
     @GetMapping("/available-dates")
     fun getAvailableDates(): ResponseEntity<*> = gameService.getAvailableDates()
 
+    @PostMapping("/admin/images/{itemId}", consumes = [MediaType.APPLICATION_OCTET_STREAM_VALUE])
+    fun storeImage(
+        @PathVariable itemId: String,
+        @RequestBody bytes: ByteArray,
+    ): ResponseEntity<*> = gameService.storeImage(itemId, bytes)
+
     @PostMapping("/admin/curate")
     fun triggerCuration(
         @RequestParam(required = false) date: String?,
-    ): ResponseEntity<*> = gameService.triggerCuration(date)
+        @RequestParam(required = false) startDate: String?,
+        @RequestParam(required = false) endDate: String?,
+    ): ResponseEntity<*> = gameService.triggerCuration(date, startDate, endDate)
 }
