@@ -1,17 +1,20 @@
 export function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-400';
-  if (score >= 50) return 'text-yellow-400';
-  return 'text-red-400';
+  if (score >= 90) return 'text-msrp-green';
+  if (score >= 70) return 'text-msrp-yellow';
+  if (score >= 40) return 'text-msrp-orange';
+  return 'text-msrp-red';
 }
 
 export function getScoreBg(score: number): string {
-  if (score >= 80) return 'bg-green-400/20';
-  if (score >= 50) return 'bg-yellow-400/20';
-  return 'bg-red-400/20';
+  if (score >= 90) return 'bg-msrp-green/20';
+  if (score >= 70) return 'bg-msrp-yellow/20';
+  if (score >= 40) return 'bg-msrp-orange/20';
+  return 'bg-msrp-red/20';
 }
 
 export function getScoreDot(score: number): string {
-  if (score >= 80) return 'bg-green-400';
-  if (score >= 50) return 'bg-yellow-400';
-  return 'bg-red-400';
+  if (score >= 90) return 'bg-msrp-green';
+  if (score >= 70) return 'bg-msrp-yellow';
+  if (score >= 40) return 'bg-msrp-orange';
+  return 'bg-msrp-red';
 }
