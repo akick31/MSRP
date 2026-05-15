@@ -19,7 +19,7 @@ export function buildShareText(results: RoundResult[], streak: number): string {
   const totalScore = results.reduce((sum, r) => sum + r.score, 0);
   const emojiRow = results.map((r) => scoreToEmoji(r.score)).join(' ');
   const puzzleNo = getPuzzleNumber();
-  return `MSRP | No. ${puzzleNo}\nStreak: ${streak}\nScore: ${totalScore}/500\n${emojiRow}\nmsrpgame.com`;
+  return `MSRP | No. ${puzzleNo}\nStreak: ${streak}\nScore: ${totalScore}/500\n${emojiRow}\nhttps://msrpgame.com`;
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
