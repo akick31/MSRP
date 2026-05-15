@@ -7,8 +7,7 @@ const LAST_RESULTS_KEY = 'msrp-last-results';
 const TOTAL_ROUNDS = 5;
 
 function getToday(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 function loadProgress(gameDate: string): GameProgress | null {

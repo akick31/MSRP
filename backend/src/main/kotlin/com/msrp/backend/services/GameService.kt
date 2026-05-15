@@ -11,8 +11,10 @@ import org.springframework.http.ResponseEntity
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.ZoneId
 
 private val EARLIEST_DATE: LocalDate = LocalDate.of(2025, 1, 1)
+private val EST: ZoneId = ZoneId.of("America/New_York")
 
 @Service
 class GameService(
@@ -37,7 +39,7 @@ class GameService(
 
     fun getAvailableDates(): ResponseEntity<List<String>> {
         val dates =
-            dailyItemRepository.findDistinctGameDatesBefore(LocalDate.now())
+            dailyItemRepository.findDistinctGameDatesBefore(LocalDate.now(EST))
                 .map { it.toString() }
         return ResponseEntity.ok(dates)
     }
@@ -55,7 +57,7 @@ class GameService(
                 curationExecutor.execute { ebayService.curateDateRange(startDate, endDate) }
                 ResponseEntity.accepted().body(mapOf("message" to "Bulk curation started for $startDate through $endDate"))
             } else {
-                val date = if (dateParam != null) LocalDate.parse(dateParam) else LocalDate.now().plusDays(1)
+                val date = if (dateParam != null) LocalDate.parse(dateParam) else LocalDate.now(EST).plusDays(1)
                 ebayService.curateDailyItems(date)
                 ResponseEntity.ok(mapOf("message" to "Curation triggered for $date"))
             }
@@ -78,12 +80,12 @@ class GameService(
         }
 
     private fun parseDateParam(dateParam: String?): LocalDate {
-        if (dateParam == null) return LocalDate.now()
+        if (dateParam == null) return LocalDate.now(EST)
         val parsed =
             runCatching { LocalDate.parse(dateParam) }
                 .getOrElse { throw IllegalArgumentException("Invalid date format: $dateParam") }
         require(parsed >= EARLIEST_DATE) { "Date is before earliest available game" }
-        require(parsed <= LocalDate.now()) { "Date is in the future" }
+        require(parsed <= LocalDate.now(EST)) { "Date is in the future" }
         return parsed
     }
 }
