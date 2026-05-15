@@ -18,7 +18,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export async function fetchTodayItems(date?: string): Promise<DailyItem[]> {
-  const d = date ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const d = date ?? new Date().toLocaleDateString('en-CA');
   return request<DailyItem[]>(`/today?date=${d}`);
 }
 
