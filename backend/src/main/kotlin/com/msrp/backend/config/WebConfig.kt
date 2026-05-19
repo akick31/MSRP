@@ -11,10 +11,11 @@ import java.io.File
 @Configuration
 class WebConfig(
     @Value("\${msrp.image-storage-dir:./images}") private val imageStorageDir: String,
+    @Value("\${api.base-path}") private val apiBasePath: String,
 ) : WebMvcConfigurer {
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
         val location = File(imageStorageDir).apply { mkdirs() }.canonicalPath
-        registry.addResourceHandler("/images/**")
+        registry.addResourceHandler("$apiBasePath/images/**")
             .addResourceLocations("file:$location/")
     }
 

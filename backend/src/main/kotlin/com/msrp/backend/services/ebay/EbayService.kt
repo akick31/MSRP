@@ -28,6 +28,7 @@ class EbayService(
     @Value("\${msrp.image-storage-dir:./images}") private val imageStorageDir: String,
     @Value("\${msrp.image-upload-url:}") private val imageUploadUrl: String,
     @Value("\${msrp.admin.api-key}") private val adminApiKey: String,
+    @Value("\${api.base-path}") private val apiBasePath: String,
 ) {
     private val log = LoggerFactory.getLogger(EbayService::class.java)
 
@@ -167,7 +168,7 @@ class EbayService(
         val file = File(dir, "$itemId.jpg")
         if (file.exists()) {
             uploadImage(itemId, file.readBytes())
-            return "/images/$itemId.jpg"
+            return "$apiBasePath/images/$itemId.jpg"
         }
         return try {
             val request =
@@ -181,7 +182,7 @@ class EbayService(
                 val bytes = response.body()
                 file.writeBytes(bytes)
                 uploadImage(itemId, bytes)
-                "/images/$itemId.jpg"
+                "$apiBasePath/images/$itemId.jpg"
             } else {
                 imageUrl
             }
