@@ -47,6 +47,7 @@ out/
 
 ### Images ###
 *.png
+/images/
 
 ### Keystore ###
 *.p12
