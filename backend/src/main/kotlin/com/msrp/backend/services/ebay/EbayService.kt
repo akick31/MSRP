@@ -163,7 +163,9 @@ class EbayService(
         bytes: ByteArray,
     ) {
         val dir = File(imageStorageDir).apply { mkdirs() }
-        File(dir, "$itemId.jpg").writeBytes(bytes)
+        val file = File(dir, "$itemId.jpg")
+        if (file.exists()) return
+        file.writeBytes(bytes)
     }
 
     private fun downloadImage(
