@@ -146,8 +146,14 @@ class EbayService(
             } catch (e: Exception) {
                 log.error("Curation failed for {}: {}", current, e.message)
             }
-            if (!current.isEqual(endDate)) Thread.sleep(10000L)
-            current = current.plusDays(1)
+            val itemCount = dailyItemRepository.findByGameDate(current).size
+            if (itemCount >= itemsPerDay) {
+                if (!current.isEqual(endDate)) Thread.sleep(10000L)
+                current = current.plusDays(1)
+            } else {
+                log.warn("Date {} has {}/{} items, retrying after delay", current, itemCount, itemsPerDay)
+                Thread.sleep(60000L)
+            }
         }
         log.info("Bulk curation complete: {} through {}", startDate, endDate)
     }
