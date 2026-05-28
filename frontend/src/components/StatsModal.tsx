@@ -39,7 +39,7 @@ export default function StatsModal({ open, onClose, stats, lastResults }: StatsM
           <div className="text-msrp-muted text-xs mt-1">Max Streak</div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 mb-6">
+      <div className="grid grid-cols-4 gap-2 mb-6">
         <div className="text-center">
           <div className="text-2xl font-bold text-msrp-text">
             {lastResults && lastResults.length > 0
@@ -51,6 +51,16 @@ export default function StatsModal({ open, onClose, stats, lastResults }: StatsM
         <div className="text-center">
           <div className="text-2xl font-bold text-msrp-accent">{stats.highScore > 0 ? stats.highScore : '-'}</div>
           <div className="text-msrp-muted text-xs mt-1">High Score</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-msrp-text">
+            {(stats.scoreCount ?? 0) > 0 ? Math.round((stats.totalScore ?? 0) / stats.scoreCount) : '-'}
+          </div>
+          <div className="text-msrp-muted text-xs mt-1">Average</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-msrp-text">{stats.lowScore !== null && stats.lowScore !== undefined ? stats.lowScore : '-'}</div>
+          <div className="text-msrp-muted text-xs mt-1">Low Score</div>
         </div>
       </div>
 

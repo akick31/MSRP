@@ -47,6 +47,9 @@ export interface PlayerStats {
   gamesPlayed: number;
   lastPlayedDate: string;
   highScore: number;
+  lowScore: number | null;
+  totalScore: number;
+  scoreCount: number;
 }
 
 export interface GameProgress {
