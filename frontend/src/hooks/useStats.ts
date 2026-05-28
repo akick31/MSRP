@@ -27,6 +27,9 @@ function loadStats(): PlayerStats {
     gamesPlayed: 0,
     lastPlayedDate: '',
     highScore: 0,
+    lowScore: null,
+    totalScore: 0,
+    scoreCount: 0,
   };
 }
 
@@ -58,6 +61,9 @@ export function useStats() {
       gamesPlayed: current.gamesPlayed + 1,
       lastPlayedDate: today,
       highScore: score !== undefined ? Math.max(current.highScore ?? 0, score) : (current.highScore ?? 0),
+      lowScore: score !== undefined ? (current.lowScore === null || current.lowScore === undefined ? score : Math.min(current.lowScore, score)) : (current.lowScore ?? null),
+      totalScore: (current.totalScore ?? 0) + (score ?? 0),
+      scoreCount: (current.scoreCount ?? 0) + (score !== undefined ? 1 : 0),
     };
 
     saveStats(updated);
