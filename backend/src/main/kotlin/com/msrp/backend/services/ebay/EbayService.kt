@@ -306,15 +306,17 @@ class EbayService(
                 if (bidCount < minBidCount) continue
 
                 seen.add(itemId)
-                results.add(DailyItem().also {
-                    it.ebayItemId = itemId
-                    it.title = title
-                    it.imageUrl = imageUrl
-                    it.soldPrice = soldPrice
-                    it.bidCount = bidCount
-                    it.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
-                    it.saleDate = EbayParser.extractSerpSaleDate(el)
-                })
+                results.add(
+                    DailyItem().also {
+                        it.ebayItemId = itemId
+                        it.title = title
+                        it.imageUrl = imageUrl
+                        it.soldPrice = soldPrice
+                        it.bidCount = bidCount
+                        it.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
+                        it.saleDate = EbayParser.extractSerpSaleDate(el)
+                    },
+                )
             } catch (_: Exception) {
                 continue
             }
