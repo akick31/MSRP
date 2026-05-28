@@ -1,20 +1,10 @@
-export function getScoreColor(score: number): string {
-  if (score >= 90) return 'text-msrp-green';
-  if (score >= 70) return 'text-msrp-yellow';
-  if (score >= 40) return 'text-msrp-orange';
-  return 'text-msrp-red';
+function scoreTheme(score: number) {
+  if (score >= 90) return { text: 'text-msrp-green', bg: 'bg-msrp-green/20', dot: 'bg-msrp-green' } as const;
+  if (score >= 70) return { text: 'text-msrp-yellow', bg: 'bg-msrp-yellow/20', dot: 'bg-msrp-yellow' } as const;
+  if (score >= 40) return { text: 'text-msrp-orange', bg: 'bg-msrp-orange/20', dot: 'bg-msrp-orange' } as const;
+  return { text: 'text-msrp-red', bg: 'bg-msrp-red/20', dot: 'bg-msrp-red' } as const;
 }
 
-export function getScoreBg(score: number): string {
-  if (score >= 90) return 'bg-msrp-green/20';
-  if (score >= 70) return 'bg-msrp-yellow/20';
-  if (score >= 40) return 'bg-msrp-orange/20';
-  return 'bg-msrp-red/20';
-}
-
-export function getScoreDot(score: number): string {
-  if (score >= 90) return 'bg-msrp-green';
-  if (score >= 70) return 'bg-msrp-yellow';
-  if (score >= 40) return 'bg-msrp-orange';
-  return 'bg-msrp-red';
-}
+export function getScoreColor(score: number): string { return scoreTheme(score).text; }
+export function getScoreBg(score: number): string { return scoreTheme(score).bg; }
+export function getScoreDot(score: number): string { return scoreTheme(score).dot; }

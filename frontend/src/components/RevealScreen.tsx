@@ -1,6 +1,7 @@
 import { RoundResult } from '../types';
 import { ebayHighResImageUrl } from '../utils/ebayImage';
 import { getScoreColor, getScoreBg } from '../utils/scoreUtils';
+import { formatPrice } from '../utils/format';
 import ProgressBar from './ProgressBar';
 
 interface RevealScreenProps {
@@ -8,10 +9,6 @@ interface RevealScreenProps {
   currentRound: number;
   totalRounds: number;
   onNext: () => void;
-}
-
-function formatPrice(price: number): string {
-  return price.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
 export default function RevealScreen({ result, currentRound, totalRounds, onNext }: RevealScreenProps) {

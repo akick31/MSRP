@@ -3,18 +3,14 @@ import { PlayerStats } from '../types';
 
 const STATS_KEY = 'msrp-stats';
 
-function getLocalDate(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 function getToday(): string {
-  return getLocalDate(new Date());
+  return new Date().toLocaleDateString('en-CA');
 }
 
 function getYesterday(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return getLocalDate(d);
+  return d.toLocaleDateString('en-CA');
 }
 
 function loadStats(): PlayerStats {

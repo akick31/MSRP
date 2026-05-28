@@ -53,7 +53,7 @@ export async function submitScore(score: number, date: string): Promise<void> {
       body: JSON.stringify({ score, date }),
     });
   } catch (e) {
-    console.error('[analytics] failed to submit score', e);
+    console.error('failed to submit score', e);
   }
 }
 
@@ -67,13 +67,5 @@ export async function submitContact(payload: {
   subject: string;
   message: string;
 }): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/contact`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
+  await request('/contact', { method: 'POST', body: JSON.stringify(payload) });
 }

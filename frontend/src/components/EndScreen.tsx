@@ -3,6 +3,7 @@ import { RoundResult, PlayerStats, GlobalStats } from '../types';
 import { buildShareText, copyToClipboard } from '../utils/share';
 import { fetchGlobalStats } from '../services/api';
 import { getScoreColor, getScoreDot } from '../utils/scoreUtils';
+import { formatPrice } from '../utils/format';
 
 interface EndScreenProps {
   results: RoundResult[];
@@ -10,10 +11,6 @@ interface EndScreenProps {
   gameDate: string;
   isPastGame?: boolean;
   onPlayPastGame?: () => void;
-}
-
-function formatPrice(price: number): string {
-  return price.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
 
 export default function EndScreen({ results, stats, gameDate, isPastGame = false, onPlayPastGame }: EndScreenProps) {
