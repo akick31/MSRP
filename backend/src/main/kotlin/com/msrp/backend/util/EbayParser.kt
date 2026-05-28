@@ -1,9 +1,12 @@
 package com.msrp.backend.util
 
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.IdentityHashMap
 import java.util.Locale
 
 object EbayParser {
@@ -35,11 +38,11 @@ object EbayParser {
     private val imageUpgradeRegex = Regex("""/s-l\d+""", RegexOption.IGNORE_CASE)
     private val priceStripRegex = Regex("[^0-9.]")
 
-    fun parseSerpRows(html: String): List<org.jsoup.nodes.Element> = collectSerpListingElements(Jsoup.parse(html))
+    fun parseSerpRows(html: String): List<Element> = collectSerpListingElements(Jsoup.parse(html))
 
-    private fun collectSerpListingElements(doc: org.jsoup.nodes.Document): List<org.jsoup.nodes.Element> {
-        val seen = java.util.IdentityHashMap<org.jsoup.nodes.Element, Boolean>()
-        val out = mutableListOf<org.jsoup.nodes.Element>()
+    private fun collectSerpListingElements(doc: Document): List<Element> {
+        val seen = IdentityHashMap<Element, Boolean>()
+        val out = mutableListOf<Element>()
         for (sel in serpCardSelectors) {
             for (el in doc.select(sel)) {
                 if (el.selectFirst("a[href*='/itm/']") == null) continue
@@ -50,7 +53,7 @@ object EbayParser {
         return out
     }
 
-    fun extractSerpTitle(el: org.jsoup.nodes.Element): String {
+    fun extractSerpTitle(el: Element): String {
         val raw =
             el.selectFirst(
                 ".s-card__title, .s-item__title, [class*='s-card__title'], [class*='s-item__title'], div[role=heading].s-card__title, h3.s-card__title",
@@ -60,7 +63,7 @@ object EbayParser {
         return raw.replace("Opens in a new window or tab", "", ignoreCase = true).trim()
     }
 
-    fun extractSerpSaleDate(el: org.jsoup.nodes.Element): LocalDate? {
+    fun extractSerpSaleDate(el: Element): LocalDate? {
         val raw =
             el.selectFirst(
                 ".s-item__ended-date, .s-item__caption--signal.POSITIVE, span.POSITIVE, .s-item__caption--signal",
@@ -76,7 +79,7 @@ object EbayParser {
         return null
     }
 
-    fun extractSerpItemHref(el: org.jsoup.nodes.Element): String? {
+    fun extractSerpItemHref(el: Element): String? {
         val a = el.selectFirst("a.s-card__link, a.s-item__link, a[href*='/itm/']") ?: return null
         var href = a.attr("href").trim()
         if (href.isEmpty()) return null
@@ -103,7 +106,7 @@ object EbayParser {
         return imageUpgradeRegex.replace(url, "/s-l1600")
     }
 
-    fun firstImageUrlFromImg(imgEl: org.jsoup.nodes.Element?): String? {
+    fun firstImageUrlFromImg(imgEl: Element?): String? {
         if (imgEl == null) return null
         var bestUrl: String? = null
         var bestScore = -1

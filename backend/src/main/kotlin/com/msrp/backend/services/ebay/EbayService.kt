@@ -21,6 +21,7 @@ import java.time.Duration
 import java.time.LocalDate
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.round
 
 @Service
 class EbayService(
@@ -63,10 +64,9 @@ class EbayService(
         guess: Double,
     ): VerifyResponse {
         val item = dailyItemRepository.findById(itemId).orElseThrow { ItemNotFoundException() }
-        val percentageOff = (abs(guess - item.soldPrice) / item.soldPrice) * 100.0
-        val roundedPercentageOff = Math.round(percentageOff * 100.0) / 100.0
+        val percentageOff = round((abs(guess - item.soldPrice) / item.soldPrice) * 10000.0) / 100.0
         if (abs(guess - item.soldPrice) <= 1.0) {
-            return VerifyResponse(itemId = item.id, guess = guess, actualPrice = item.soldPrice, percentageOff = roundedPercentageOff, score = 100)
+            return VerifyResponse(itemId = item.id, guess = guess, actualPrice = item.soldPrice, percentageOff = percentageOff, score = 100)
         }
         val ratio = if (guess > 0) maxOf(guess / item.soldPrice, item.soldPrice / guess) else Double.MAX_VALUE
         val logPenalty = 16.0 * ln(ratio)
@@ -76,7 +76,7 @@ class EbayService(
             itemId = item.id,
             guess = guess,
             actualPrice = item.soldPrice,
-            percentageOff = roundedPercentageOff,
+            percentageOff = percentageOff,
             score = score,
         )
     }
@@ -306,15 +306,15 @@ class EbayService(
                 if (bidCount < minBidCount) continue
 
                 seen.add(itemId)
-                val entity = DailyItem()
-                entity.ebayItemId = itemId
-                entity.title = title
-                entity.imageUrl = imageUrl
-                entity.soldPrice = soldPrice
-                entity.bidCount = bidCount
-                entity.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
-                entity.saleDate = EbayParser.extractSerpSaleDate(el)
-                results.add(entity)
+                results.add(DailyItem().also {
+                    it.ebayItemId = itemId
+                    it.title = title
+                    it.imageUrl = imageUrl
+                    it.soldPrice = soldPrice
+                    it.bidCount = bidCount
+                    it.itemUrl = "https://www.ebay.com/itm/$itemId?orig_cvip=true"
+                    it.saleDate = EbayParser.extractSerpSaleDate(el)
+                })
             } catch (_: Exception) {
                 continue
             }
