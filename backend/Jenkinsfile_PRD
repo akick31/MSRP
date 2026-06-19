@@ -101,12 +101,13 @@ spring.jackson.property-naming-strategy=SNAKE_CASE
 
 msrp.admin.api-key=${env.ADMIN_API_KEY}
 
-spring.mail.host=smtp.gmail.com
+spring.mail.host=smtp.protonmail.ch
 spring.mail.port=587
 spring.mail.username=${env.MAIL_USERNAME}
 spring.mail.password=${env.MAIL_PASSWORD}
 spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.auth.mechanisms=PLAIN LOGIN
 
 api.base-path=/api/v1/msrp
 
