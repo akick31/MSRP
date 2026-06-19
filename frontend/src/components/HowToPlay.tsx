@@ -60,7 +60,8 @@ export default function HowToPlay({ open, onClose, onContact }: HowToPlayProps) 
 
         <div className="border-t border-msrp-border pt-4">
           <p className="text-msrp-muted text-xs">
-            MSRP is a project by Andrew Kicklighter and is not affiliated with eBay.
+            MSRP is an independent project by Andrew at <a href="https://polyloon.com" target="_blank">Polyloon
+            Studios</a> and is not affiliated with eBay.
           </p>
         </div>
 
