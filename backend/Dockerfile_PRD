@@ -9,4 +9,4 @@ COPY ./build/libs/*.jar app.jar
 
 EXPOSE 1010
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx1024m", "-jar", "app.jar"]

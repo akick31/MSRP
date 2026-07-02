@@ -57,6 +57,7 @@ pipeline {
                     dir('frontend') {
                         sh """
                             docker run -d --name ${CONTAINER_NAME_BLUE} \\
+                                --memory=256m \\
                                 -p 11520:920 \\
                                 --env-file .env \\
                                 ${IMAGE_NAME}:latest
@@ -111,6 +112,7 @@ pipeline {
                             docker stop ${CONTAINER_NAME_BLUE} || true
                             docker rm ${CONTAINER_NAME_BLUE} || true
                             docker run -d --restart=always --name ${CONTAINER_NAME} \\
+                                --memory=256m \\
                                 -p 920:920 \\
                                 --env-file .env \\
                                 ${IMAGE_NAME}:latest

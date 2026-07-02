@@ -108,6 +108,7 @@ api.base-path=/api/v1/msrp
                 sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
                 sh """
                     docker run -d --name ${CONTAINER_NAME_BLUE} \\
+                        --memory=1536m \\
                         -p 11519:919 \\
                         ${IMAGE_NAME}:${DOCKERFILE}
                 """
@@ -157,6 +158,7 @@ api.base-path=/api/v1/msrp
                     docker stop ${CONTAINER_NAME_BLUE} || true
                     docker rm ${CONTAINER_NAME_BLUE} || true
                     docker run --network="host" -d --restart=always --name ${CONTAINER_NAME} \\
+                        --memory=1536m \\
                         ${IMAGE_NAME}:${DOCKERFILE}
                 """
             }

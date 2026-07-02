@@ -27,7 +27,6 @@ pipeline {
         }
 
         stage('Bump Version & Tag') {
-            when { branch 'main' }
             steps {
                 script {
                     def latestTag = sh(
@@ -63,20 +62,6 @@ pipeline {
             }
         }
 
-        stage('Get Version') {
-            when { not { branch 'main' } }
-            steps {
-                script {
-                    def latestTag = sh(
-                        script: "git describe --tags --abbrev=0 2>/dev/null || echo 'v0.0.0'",
-                        returnStdout: true
-                    ).trim()
-                    env.VERSION = latestTag
-                    currentBuild.description = "Version: ${latestTag}"
-                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - ${latestTag}"
-                }
-            }
-        }
 
         stage('Build') {
             steps {
@@ -152,6 +137,7 @@ msrp.image-upload-url=
                 sh "docker rm -f ${CONTAINER_NAME_BLUE} || true"
                 sh """
                     docker run -d --name ${CONTAINER_NAME_BLUE} \\
+                        --memory=1536m \\
                         -p 11510:1010 \\
                         ${IMAGE_NAME}:${DOCKERFILE}
                 """
@@ -202,6 +188,7 @@ msrp.image-upload-url=
                     docker rm ${CONTAINER_NAME_BLUE} || true
                     mkdir -p /opt/msrp/images
                     docker run --network="host" -d --restart=always --name ${CONTAINER_NAME} \\
+                        --memory=1536m \\
                         -v /opt/msrp/images:/app/images \\
                         ${IMAGE_NAME}:${DOCKERFILE}
                 """
