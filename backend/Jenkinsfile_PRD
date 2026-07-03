@@ -27,7 +27,67 @@ pipeline {
         }
 
         stage('Bump Version & Tag') {
-            git
+            steps {
+                script {
+                    // Force clean up local tag cache and fetch all remote tags
+                    sh "git fetch --tags --prune --prune-tags"
+
+                    // 1. Try to find the closest tag in history (safely handle zero-tag history without crashing)
+                    def latestTag = sh(
+                        script: "git describe --abbrev=0 --tags 2>/dev/null || echo ''",
+                        returnStdout: true
+                    ).trim()
+
+                    // 2. Fallback: If history path is empty, grab the highest semantic tag globally from the cache
+                    if (!latestTag) {
+                        echo "No tags reachable in current commit history. Querying global tag list..."
+                        latestTag = sh(
+                            script: "git tag -l 'v*' --sort=-v:refname | head -n 1",
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    // 3. Absolute fallback if the repository has completely zero tags anywhere
+                    if (!latestTag) {
+                        echo "No tags found anywhere in the repository. Defaulting to v0.0.0"
+                        latestTag = 'v0.0.0'
+                    }
+
+                    echo "Latest detected tag is: ${latestTag}"
+
+                    // Normalize the tag by removing any leading 'v' for tokenization
+                    def version = latestTag.replaceFirst(/^v/, '')
+                    def parts   = version.tokenize('.')
+                    def major   = parts[0].toInteger()
+                    def minor   = parts[1].toInteger()
+                    def patch   = parts[2].toInteger()
+
+                    // Determine version bump based on commit message annotations
+                    def msg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    if (msg.contains('[major]')) {
+                        major++; minor = 0; patch = 0
+                    } else if (msg.contains('[minor]')) {
+                        minor++; patch = 0
+                    } else {
+                        patch++
+                    }
+
+                    def newVersion = "v${major}.${minor}.${patch}"
+                    echo "New version calculated: ${newVersion}"
+
+                    // Commit changes and push the clean tag up to the repository
+                    sh """
+                        git config user.email "jenkins@boxscore.build"
+                        git config user.name  "Jenkins"
+                        git tag -a ${newVersion} -m "Auto-release ${newVersion} [build ${env.BUILD_NUMBER}]"
+                        git push https://${env.GITHUB_PAT_USR}:${env.GITHUB_PAT_PSW}@github.com/\$(git remote get-url origin | sed 's|.*github.com[:/]||') ${newVersion}
+                    """
+                    env.VERSION = newVersion
+                    currentBuild.description = "Version: ${newVersion}"
+                    currentBuild.displayName = "Build #${env.BUILD_NUMBER} - ${newVersion}"
+                }
+            }
+        }
 
 
         stage('Build') {
