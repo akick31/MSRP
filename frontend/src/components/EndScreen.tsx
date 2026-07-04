@@ -59,7 +59,7 @@ export default function EndScreen({ results, stats, gameDate, isPastGame = false
       {globalStats && globalStats.playerCount > 0 && (
         <div className="bg-msrp-card border border-msrp-border rounded-lg p-4 mb-6">
           <p className="text-msrp-muted text-xs text-center mb-3">
-            Global Stats · {globalStats.playerCount} {globalStats.playerCount === 1 ? 'player' : 'players'} today
+            Global Stats - {globalStats.playerCount} {globalStats.playerCount === 1 ? 'player' : 'players'} today
           </p>
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center">

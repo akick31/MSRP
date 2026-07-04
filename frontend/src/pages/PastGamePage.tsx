@@ -56,7 +56,7 @@ export default function PastGamePage() {
 
       <div className="w-full max-w-[400px] mb-3 flex items-center justify-between">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-msrp-card border border-msrp-border text-xs text-msrp-muted">
-          Past Game · {date}
+          Past Game - {date}
         </div>
         <Link to="/" className="text-xs text-msrp-muted hover:text-msrp-text transition-colors">
           Back to today

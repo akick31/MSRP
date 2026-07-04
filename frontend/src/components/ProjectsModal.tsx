@@ -39,12 +39,12 @@ export default function ProjectsModal({ open, onClose }: ProjectsModalProps) {
             ))}
           </div>
 
-          <div className="pt-2 border-t border-sv-border text-center">
+          <div className="pt-2 border-t border-msrp-border text-center">
             <a
               href="https://polyloon.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-sv-muted hover:text-sv-accent underline transition-colors"
+              className="text-xs text-msrp-muted hover:text-msrp-accent underline transition-colors"
             >
               See everything I'm building at polyloon.com
             </a>
