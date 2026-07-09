@@ -18,8 +18,8 @@ export default function LandingPage({ puzzleNumber, onPlay }: LandingPageProps) 
       <div className="text-5xl font-bold text-msrp-accent mb-2 tracking-tight">$</div>
       <h1 className="text-4xl font-bold text-msrp-text tracking-tight mb-3">MSRP</h1>
       <p className="text-msrp-muted text-base mb-6 max-w-[280px]">
-        A daily eBay auction sale price guessing game similar to Price Is Right. Guess the price that 5 real eBay
-          auction items sold for and shoot for the highest score.
+        A daily sale price guessing game similar to the Price Is Right's "One Bid" game but it uses real eBay auction items.
+          Guess the price that 5 of these auction items sold for, the closer you are the higher your score.
       </p>
 
       <div className="text-msrp-muted text-sm mb-8">

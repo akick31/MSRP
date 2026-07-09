@@ -11,7 +11,8 @@ export const routes = {
   home: {
     path: '/',
     title: 'MSRP - Daily eBay Price Guessing Game',
-    description: 'Guess what 5 real eBay auctions actually sold for in this free daily game in a similar vein to Price is Right. New puzzle every day.',
+    description: 'A daily sale price guessing game similar to the Price Is Right\'s "One Bid" game but it uses real eBay' +
+        ' auction items. Guess the price that 5 of these auction items sold for, the closer you are the higher your score.',
   },
 } satisfies Record<string, RouteMeta>;
 
