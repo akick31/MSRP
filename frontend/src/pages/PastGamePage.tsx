@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { recordAnalytics } from '../services/api';
 import { useGameState } from '../hooks/useGameState';
 import { useStats } from '../hooks/useStats';
@@ -54,13 +54,10 @@ export default function PastGamePage() {
         onSettings={() => openModal('settings')}
       />
 
-      <div className="w-full max-w-[400px] mb-3 flex items-center justify-between">
+      <div className="w-full max-w-[400px] mb-3 flex items-center justify-center">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-msrp-card border border-msrp-border text-xs text-msrp-muted">
           Past Game - {date}
         </div>
-        <Link to="/" className="text-xs text-msrp-muted hover:text-msrp-text transition-colors">
-          Back to today
-        </Link>
       </div>
 
       <main className="w-full max-w-[400px] flex-1">

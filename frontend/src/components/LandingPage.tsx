@@ -15,8 +15,8 @@ function formatDate(): string {
 export default function LandingPage({ puzzleNumber, onPlay }: LandingPageProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
-      <div className="text-5xl font-bold text-msrp-accent mb-2 tracking-tight">$</div>
-      <h1 className="text-4xl font-bold text-msrp-text tracking-tight mb-3">MSRP</h1>
+      <div className="font-brand font-bold text-5xl text-msrp-accent mb-2">$</div>
+      <h1 className="font-brand text-5xl text-msrp-text mb-3">MSRP</h1>
       <p className="text-msrp-muted text-base mb-6 max-w-[280px] sm:max-w-xl">
           A daily sale price guessing game similar to The Price Is Right's "One Bid".
           The game takes real eBay auction items and your goal is to guess the final sale price of five items.

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 interface HeaderProps {
   onHowToPlay: () => void;
   onPastGame: () => void;
@@ -6,13 +8,19 @@ interface HeaderProps {
   onSettings: () => void;
 }
 
+function Divider() {
+  return <div className="w-px h-5 bg-msrp-border" />;
+}
+
 export default function Header({ onHowToPlay, onPastGame, onStats, onGlobalStats, onSettings }: HeaderProps) {
   return (
-    <header className="w-full max-w-[400px] flex items-center justify-between mb-4">
-      <div className="flex items-center gap-1">
+    <header className="w-full max-w-[400px] flex flex-col items-center mb-4">
+      <Link to="/" className="font-brand text-4xl text-msrp-text mb-2">MSRP</Link>
+
+      <nav className="w-full flex items-center justify-center gap-3">
         <button
           onClick={onHowToPlay}
-          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
+          className="p-1 text-msrp-muted hover:text-msrp-text transition-colors"
           aria-label="How to play"
           title="How to play"
         >
@@ -22,27 +30,24 @@ export default function Header({ onHowToPlay, onPastGame, onStats, onGlobalStats
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </button>
-      </div>
 
-      <h1 className="text-xl font-bold text-msrp-text tracking-tight">MSRP</h1>
+        <Divider />
 
-      <div className="flex items-center gap-1">
+        <Link to="/" className="text-sm font-semibold text-msrp-muted hover:text-msrp-text transition-colors">
+          Today
+        </Link>
         <button
           onClick={onPastGame}
-          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
-          aria-label="Play a previous day"
-          title="Play a previous day"
+          className="text-sm font-semibold text-msrp-muted hover:text-msrp-text transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
+          Replay
         </button>
+
+        <Divider />
+
         <button
           onClick={onGlobalStats}
-          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
+          className="p-1 text-msrp-muted hover:text-msrp-text transition-colors"
           aria-label="Global statistics"
           title="Global statistics"
         >
@@ -54,7 +59,7 @@ export default function Header({ onHowToPlay, onPastGame, onStats, onGlobalStats
         </button>
         <button
           onClick={onStats}
-          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
+          className="p-1 text-msrp-muted hover:text-msrp-text transition-colors"
           aria-label="Statistics"
           title="Statistics"
         >
@@ -66,7 +71,7 @@ export default function Header({ onHowToPlay, onPastGame, onStats, onGlobalStats
         </button>
         <button
           onClick={onSettings}
-          className="p-2 text-msrp-muted hover:text-msrp-text transition-colors"
+          className="p-1 text-msrp-muted hover:text-msrp-text transition-colors"
           aria-label="Settings"
           title="Settings"
         >
@@ -75,7 +80,7 @@ export default function Header({ onHowToPlay, onPastGame, onStats, onGlobalStats
             <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
-      </div>
+      </nav>
     </header>
   );
 }

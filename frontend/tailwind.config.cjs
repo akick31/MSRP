@@ -4,6 +4,9 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        brand: ['"Knewave"', 'sans-serif'],
+      },
       colors: {
         msrp: {
           bg: 'var(--msrp-bg)',

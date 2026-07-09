@@ -6,7 +6,7 @@ export default function LoadingScreen({ error }: LoadingScreenProps) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-msrp-text px-4">
-        <h1 className="text-2xl font-bold mb-4">MSRP</h1>
+        <h1 className="font-brand text-3xl mb-4">MSRP</h1>
         <p className="text-msrp-red text-center">{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -20,7 +20,7 @@ export default function LoadingScreen({ error }: LoadingScreenProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-msrp-text">
-      <h1 className="text-2xl font-bold mb-4">MSRP</h1>
+      <h1 className="font-brand text-3xl mb-4">MSRP</h1>
       <div className="w-8 h-8 border-2 border-msrp-accent border-t-transparent rounded-full animate-spin" />
     </div>
   );
