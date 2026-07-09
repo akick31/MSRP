@@ -12,7 +12,7 @@ A daily price guessing game. Five real eBay auction items are shown each day wit
 
 The frontend proxies `/api` to the backend in dev. In production the backend serves on port 777; the frontend is a separate static build.
 
-## REST API (`/api/v1/msrp`)
+## REST API (`/api/v1`)
 
 | Method | Path | Notes |
 |---|---|---|

@@ -28,9 +28,4 @@ class AnalyticsController(private val analyticsService: AnalyticsService) {
     fun getGameStats(
         @RequestParam date: String,
     ): ResponseEntity<Any> = analyticsService.getGameStats(date)
-
-    @GetMapping("/admin/analytics")
-    fun getAnalytics(
-        @RequestParam(defaultValue = "30") days: Int,
-    ): ResponseEntity<Any> = analyticsService.getSummary(days)
 }

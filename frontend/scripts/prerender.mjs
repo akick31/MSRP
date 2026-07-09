@@ -12,21 +12,9 @@ const { render, routeList, SITE_URL } = await import(
 
 const template = fs.readFileSync(path.join(distDir, 'index.html'), 'utf-8')
 
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function buildHead({ title, description, path: routePath }) {
+function buildHead({ path: routePath }) {
   const url = `${SITE_URL}${routePath}`
-  const title_ = escapeHtml(title)
-  const description_ = escapeHtml(description)
   return [
-    `<title>${title_}</title>`,
-    `<meta name="description" content="${description_}" />`,
     `<link rel="canonical" href="${url}" />`,
   ].join('\n    ')
 }

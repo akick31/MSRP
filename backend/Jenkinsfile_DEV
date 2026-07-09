@@ -68,7 +68,7 @@ spring.mail.properties.mail.smtp.starttls.enable=true
 spring.mail.properties.mail.smtp.starttls.required=true
 spring.mail.properties.mail.smtp.auth.mechanisms=PLAIN LOGIN
 
-api.base-path=/api/v1/msrp
+api.base-path=/api/v1
 """
 
                         writeFile file: "${env.APP_PROPERTIES}", text: propertiesContent
