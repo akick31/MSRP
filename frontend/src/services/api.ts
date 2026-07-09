@@ -1,6 +1,6 @@
 import { DailyItem, GlobalStats, VerifyRequest, VerifyResponse } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${url}`, {
