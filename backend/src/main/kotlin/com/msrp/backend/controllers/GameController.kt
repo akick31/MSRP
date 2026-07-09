@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("\${api.base-path}")
+@RequestMapping("\${api.base-path}/game")
 class GameController(private val gameService: GameService) {
     @GetMapping("/today")
     fun getTodayItems(

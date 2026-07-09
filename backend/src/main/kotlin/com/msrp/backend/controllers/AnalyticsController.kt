@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("\${api.base-path}")
+@RequestMapping("\${api.base-path}/analytics")
 class AnalyticsController(private val analyticsService: AnalyticsService) {
-    @PostMapping("/analytics")
+    @PostMapping("")
     fun recordAnalytics(
         @RequestBody request: AnalyticsRequest,
     ): ResponseEntity<Any> = analyticsService.recordFromRequest(request)

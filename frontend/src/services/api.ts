@@ -19,18 +19,18 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
 export async function fetchTodayItems(date?: string): Promise<DailyItem[]> {
   const d = date ?? new Date().toLocaleDateString('en-CA');
-  return request<DailyItem[]>(`/today?date=${d}`);
+  return request<DailyItem[]>(`/game/today?date=${d}`);
 }
 
 export async function verifyGuess(payload: VerifyRequest): Promise<VerifyResponse> {
-  return request<VerifyResponse>('/verify', {
+  return request<VerifyResponse>('/game/verify', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
 export async function fetchAvailableDates(): Promise<string[]> {
-  return request<string[]>('/available-dates');
+  return request<string[]>('/game/available-dates');
 }
 
 export async function recordAnalytics(eventType: string): Promise<void> {
@@ -47,7 +47,7 @@ export async function recordAnalytics(eventType: string): Promise<void> {
 
 export async function submitScore(score: number, date: string): Promise<void> {
   try {
-    await fetch(`${API_BASE_URL}/score`, {
+    await fetch(`${API_BASE_URL}/analytics/score`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ score, date }),
@@ -58,7 +58,7 @@ export async function submitScore(score: number, date: string): Promise<void> {
 }
 
 export async function fetchGlobalStats(date: string): Promise<GlobalStats> {
-  return request<GlobalStats>(`/game-stats?date=${date}`);
+  return request<GlobalStats>(`/analytics/game-stats?date=${date}`);
 }
 
 export async function submitContact(payload: {

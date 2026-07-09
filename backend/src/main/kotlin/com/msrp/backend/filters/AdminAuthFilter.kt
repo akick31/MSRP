@@ -23,7 +23,7 @@ class AdminAuthFilter(
         if (provided.isNullOrBlank() || !constantTimeEquals(provided, apiKey)) {
             response.status = HttpServletResponse.SC_UNAUTHORIZED
             response.contentType = "application/json"
-            response.writer.write("{\"error\":\"Unauthorized\"}")
+            response.writer.write("{\"error\":\"Unauthorized. Wrong API key\"}")
             return
         }
         filterChain.doFilter(request, response)
