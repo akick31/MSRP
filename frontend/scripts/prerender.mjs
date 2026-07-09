@@ -28,11 +28,6 @@ function buildHead({ title, description, path: routePath }) {
     `<title>${title_}</title>`,
     `<meta name="description" content="${description_}" />`,
     `<link rel="canonical" href="${url}" />`,
-    `<meta property="og:title" content="${title_}" />`,
-    `<meta property="og:description" content="${description_}" />`,
-    `<meta property="og:url" content="${url}" />`,
-    `<meta name="twitter:title" content="${title_}" />`,
-    `<meta name="twitter:description" content="${description_}" />`,
   ].join('\n    ')
 }
 

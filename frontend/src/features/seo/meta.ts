@@ -10,7 +10,7 @@ export interface RouteMeta {
 export const routes = {
   home: {
     path: '/',
-    title: 'MSRP — Daily eBay Price Guessing Game (Price Is Right Style)',
+    title: 'MSRP - Daily eBay Price Guessing Game',
     description: 'Think you know eBay prices? Guess what 5 real eBay auctions actually sold for in this free daily game, Price Is Right style. New puzzle every day.',
   },
 } satisfies Record<string, RouteMeta>;
