@@ -18,7 +18,7 @@ export default function LandingPage({ puzzleNumber, onPlay }: LandingPageProps) 
       <div className="text-5xl font-bold text-msrp-accent mb-2 tracking-tight">$</div>
       <h1 className="text-4xl font-bold text-msrp-text tracking-tight mb-3">MSRP</h1>
       <p className="text-msrp-muted text-base mb-6 max-w-[280px]">
-        Guess the price that 5 real eBay auction items sold for.
+        A daily Price Is Right style game — guess the price that 5 real eBay auction items sold for.
       </p>
 
       <div className="text-msrp-muted text-sm mb-8">
