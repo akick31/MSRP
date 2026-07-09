@@ -5,28 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>MSRP — Daily eBay Price Guessing Game (Price Is Right Style)</title>
-    <meta name="description" content="Think you know eBay prices? Guess what 5 real eBay auctions actually sold for in this free daily game, Price Is Right style. New puzzle every day." />
     <meta name="keywords" content="price is right game, ebay game, price guessing game, daily guessing game, guess the price, ebay auction game, wordle style game" />
     <meta name="author" content="Polyloon Studios" />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://msrpgame.com/" />
 
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
 
+    <!--app-head-->
+
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://msrpgame.com/" />
     <meta property="og:site_name" content="MSRP" />
-    <meta property="og:title" content="MSRP — Daily eBay Price Guessing Game" />
-    <meta property="og:description" content="Guess what 5 real eBay auctions actually sold for. A free daily price guessing game, Price Is Right style." />
     <meta property="og:image" content="https://msrpgame.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="MSRP — Daily eBay Price Guessing Game" />
-    <meta name="twitter:description" content="Guess what 5 real eBay auctions actually sold for. A free daily price guessing game, Price Is Right style." />
     <meta name="twitter:image" content="https://msrpgame.com/og-image.png" />
 
     <script type="application/ld+json">
@@ -58,7 +52,7 @@
     <!-- End Cloudflare Web Analytics -->
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root"><!--app-html--></div>
+    <script type="module" src="/src/entry-client.tsx"></script>
   </body>
 </html>

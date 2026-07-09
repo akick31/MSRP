@@ -3,7 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import DailyPage from './pages/DailyPage';
 import PastGamePage from './pages/PastGamePage';
 
-export default function App() {
+export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<DailyPage />} />

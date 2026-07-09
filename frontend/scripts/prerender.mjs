@@ -1,0 +1,66 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+const distDir = path.join(root, 'dist')
+const ssrDir = path.join(root, 'dist-ssr')
+
+const { render, routeList, SITE_URL } = await import(
+  path.join(ssrDir, 'entry-server.js')
+)
+
+const template = fs.readFileSync(path.join(distDir, 'index.html'), 'utf-8')
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function buildHead({ title, description, path: routePath }) {
+  const url = `${SITE_URL}${routePath}`
+  const title_ = escapeHtml(title)
+  const description_ = escapeHtml(description)
+  return [
+    `<title>${title_}</title>`,
+    `<meta name="description" content="${description_}" />`,
+    `<link rel="canonical" href="${url}" />`,
+    `<meta property="og:title" content="${title_}" />`,
+    `<meta property="og:description" content="${description_}" />`,
+    `<meta property="og:url" content="${url}" />`,
+    `<meta name="twitter:title" content="${title_}" />`,
+    `<meta name="twitter:description" content="${description_}" />`,
+  ].join('\n    ')
+}
+
+for (const route of routeList) {
+  const appHtml = render(route.path)
+  const headHtml = buildHead(route)
+  const html = template
+    .replace('<!--app-head-->', headHtml)
+    .replace('<!--app-html-->', appHtml)
+
+  const outPath =
+    route.path === '/'
+      ? path.join(distDir, 'index.html')
+      : path.join(distDir, route.path.replace(/^\//, ''), 'index.html')
+
+  fs.mkdirSync(path.dirname(outPath), { recursive: true })
+  fs.writeFileSync(outPath, html)
+  console.log(`prerendered ${route.path} -> ${path.relative(root, outPath)}`)
+}
+
+const sitemap = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+  ...routeList.map((route) => `  <url><loc>${SITE_URL}${route.path}</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`),
+  '</urlset>',
+  '',
+].join('\n')
+fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap)
+console.log('wrote dist/sitemap.xml')
+
+fs.rmSync(ssrDir, { recursive: true, force: true })

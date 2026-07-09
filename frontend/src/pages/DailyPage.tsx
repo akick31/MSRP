@@ -81,10 +81,6 @@ export default function DailyPage() {
     [gameState, results],
   );
 
-  if (gameState === 'loading') {
-    return <LoadingScreen error={error} />;
-  }
-
   return (
     <div className="min-h-screen bg-msrp-bg flex flex-col items-center px-4 py-4">
       <Header
@@ -96,6 +92,7 @@ export default function DailyPage() {
       />
 
       <main className="w-full max-w-[400px] flex-1">
+        {gameState === 'loading' && <LoadingScreen error={error} />}
         {gameState === 'landing' && (
           <LandingPage puzzleNumber={getPuzzleNumber()} onPlay={handlePlay} />
         )}
